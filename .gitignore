@@ -13,3 +13,9 @@ yarn-error.log*
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Sync checkpoints
+.sync-*.json
+
+scripts/bundle.js
+scripts/inspect-bundle-usage.mjs

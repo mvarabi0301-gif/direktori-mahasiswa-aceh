@@ -608,3 +608,251 @@ export async function runTargetedSync(options: SyncTargetOptions): Promise<SyncR
     };
   }
 }
+
+export interface MultiProdiSyncOptions {
+  campusKeyword: string;
+  targetCampusCode?: string;
+  prodiLimit?: number;
+  maxStudentsPerProdi?: number;
+  fetchDetails?: boolean;
+}
+
+/**
+ * Sinkronisasi Mahasiswa Berbasis Partisi Program Studi
+ * Memperoleh data mahasiswa dari seluruh program studi kampus terkait untuk menembus batas 100 record PDDikti.
+ */
+export async function syncCampusMultiProdi(options: MultiProdiSyncOptions): Promise<SyncResult> {
+  const adminClient = getSupabaseAdminClient();
+  if (!adminClient) {
+    return {
+      success: false,
+      runId: '',
+      processedCount: 0,
+      insertedCount: 0,
+      updatedCount: 0,
+      message: 'Kredensial SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi.',
+      errors: ['SUPABASE_SERVICE_ROLE_KEY missing'],
+    };
+  }
+
+  const { data: runRecord } = await adminClient
+    .from('sync_runs')
+    .insert({
+      status: 'running',
+      target_type: 'mhs_multi_prodi_sync',
+      target_keyword: `MultiProdi:${options.campusKeyword}`,
+      processed_count: 0,
+      inserted_count: 0,
+      updated_count: 0,
+    })
+    .select('id')
+    .single();
+
+  const runId = runRecord?.id || 'local-' + Date.now();
+  let processedCount = 0;
+  let insertedCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  const errors: string[] = [];
+
+  try {
+    // 1. Resolve PT
+    const { data: ptData } = await adminClient
+      .from('institutions')
+      .select('kode_pt, nama, nama_singkat')
+      .ilike('nama', `%${options.campusKeyword}%`)
+      .limit(1)
+      .maybeSingle();
+
+    const targetKodePt = ptData?.kode_pt || options.targetCampusCode || '005016';
+    const targetNamaPt = ptData?.nama || options.campusKeyword;
+
+    // 2. Fetch prodi list
+    const prodiRes = await fetch(`${BASE_URL}/api/pencarian/prodi/${encodeURIComponent(targetNamaPt)}`, { headers: HEADERS });
+    if (!prodiRes.ok) {
+      throw new Error(`HTTP ${prodiRes.status} saat mengambil daftar prodi`);
+    }
+
+    const prodiJson = await prodiRes.json();
+    const rawProdis = prodiJson.data || [];
+    const targetUpper = targetNamaPt.toUpperCase();
+
+    const campusProdis: Array<{ nama: string; jenjang?: string; pt?: string }> = rawProdis.filter((p: { nama?: string; pt?: string }) => {
+      const pPt = (p.pt || '').toUpperCase();
+      return pPt.includes(targetUpper) || targetUpper.includes(pPt);
+    });
+
+    const prodisToProcess = options.prodiLimit && options.prodiLimit > 0
+      ? campusProdis.slice(0, options.prodiLimit)
+      : campusProdis;
+
+    const maxPerProdi = options.maxStudentsPerProdi || 100;
+
+    for (let pIdx = 0; pIdx < prodisToProcess.length; pIdx++) {
+      const prodi = prodisToProcess[pIdx];
+      const prodiNama = cleanString(prodi.nama);
+      const prodiJenjang = cleanString(prodi.jenjang) || null;
+
+      await sleep(500);
+
+      const mhsRes = await fetch(`${BASE_URL}/api/pencarian/mhs/${encodeURIComponent(prodiNama + ' ' + targetNamaPt)}`, {
+        headers: HEADERS,
+      });
+
+      if (!mhsRes.ok) {
+        errors.push(`Prodi ${prodiNama}: HTTP ${mhsRes.status}`);
+        continue;
+      }
+
+      const mhsJson = await mhsRes.json();
+      const rawList = mhsJson.data || [];
+      const studentsToInsert: Array<Record<string, unknown>> = [];
+
+      for (let i = 0; i < Math.min(rawList.length, maxPerProdi); i++) {
+        const item = rawList[i];
+        processedCount++;
+
+        const nim = cleanString(item.nim);
+        const nama = cleanString(item.nama);
+        const studentPt = cleanString(item.nama_pt);
+
+        if (!nim || !nama) continue;
+
+        // Guard Kontaminasi
+        const studentPtUpper = studentPt.toUpperCase();
+        if (!studentPtUpper.includes(targetUpper) && !targetUpper.includes(studentPtUpper)) {
+          skippedCount++;
+          continue;
+        }
+
+        let studentKodeProdi: string | null = null;
+        let studentJenjang = prodiJenjang;
+        let status = 'Aktif';
+        let tanggalMasuk: string | null = null;
+        let tahunMasuk = extractYear(null);
+        let jenisKelamin: string | null = null;
+        let rawDetailObj: Record<string, unknown> = {};
+
+        if (options.fetchDetails && item.id) {
+          await sleep(600);
+          try {
+            const detailRes = await fetch(`${BASE_URL}/api/detail/mhs`, {
+              method: 'POST',
+              headers: {
+                ...HEADERS,
+                'Content-Type': 'application/json',
+                'Referer': `${BASE_URL}/detail-mhs/${item.id}`,
+              },
+              body: JSON.stringify({ id: item.id }),
+            });
+
+            if (detailRes.ok) {
+              const detailJson = await detailRes.json();
+              const d = detailJson.data || detailJson;
+              if (d && typeof d === 'object') {
+                rawDetailObj = d;
+                studentKodeProdi = cleanString(d.kode_prodi) || null;
+                studentJenjang = cleanString(d.jenjang) || studentJenjang;
+                status = cleanStatus(d.status_saat_ini);
+                tanggalMasuk = cleanString(d.tanggal_masuk) || null;
+                tahunMasuk = extractYear(tanggalMasuk);
+                jenisKelamin = cleanString(d.jenis_kelamin) || null;
+              }
+            }
+          } catch {
+            // detail fallback
+          }
+        }
+
+        if (!tahunMasuk) {
+          // Infer from NIM
+          if (/^(19\d{2}|20\d{2})/.test(nim)) {
+            tahunMasuk = parseInt(nim.slice(0, 4), 10);
+          } else if (/^\d{2}/.test(nim)) {
+            const prefix = parseInt(nim.slice(0, 2), 10);
+            tahunMasuk = prefix >= 80 ? 1900 + prefix : 2000 + prefix;
+          }
+        }
+
+        studentsToInsert.push({
+          kode_pt: targetKodePt,
+          nama_pt: targetNamaPt,
+          nim,
+          nama,
+          kode_prodi: studentKodeProdi,
+          prodi: cleanString(item.nama_prodi) || prodiNama,
+          jenjang: studentJenjang,
+          status,
+          tanggal_masuk: tanggalMasuk,
+          tahun_masuk: tahunMasuk,
+          jenis_kelamin: jenisKelamin,
+          raw_detail: rawDetailObj,
+          synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      if (studentsToInsert.length > 0) {
+        const { error: upsertErr } = await adminClient
+          .from('students')
+          .upsert(studentsToInsert, { onConflict: 'kode_pt,nim' });
+
+        if (upsertErr) {
+          errors.push(`Upsert error for ${prodiNama}: ${upsertErr.message}`);
+        } else {
+          insertedCount += studentsToInsert.length;
+        }
+      }
+    }
+
+    if (runRecord) {
+      await adminClient
+        .from('sync_runs')
+        .update({
+          ended_at: new Date().toISOString(),
+          status: errors.length > 0 && insertedCount === 0 ? 'failed' : 'success',
+          processed_count: processedCount,
+          inserted_count: insertedCount,
+          updated_count: updatedCount,
+          error_message: errors.length > 0 ? errors.slice(0, 5).join('; ') : null,
+        })
+        .eq('id', runRecord.id);
+    }
+
+    return {
+      success: true,
+      runId,
+      processedCount,
+      insertedCount,
+      updatedCount,
+      skippedCount,
+      message: `Multi-prodi sync selesai. Total prodi diproses: ${prodisToProcess.length}, Mahasiswa tersimpan: ${insertedCount}.`,
+      errors,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (runRecord) {
+      await adminClient
+        .from('sync_runs')
+        .update({
+          ended_at: new Date().toISOString(),
+          status: 'failed',
+          processed_count: processedCount,
+          inserted_count: insertedCount,
+          updated_count: updatedCount,
+          error_message: msg,
+        })
+        .eq('id', runRecord.id);
+    }
+    return {
+      success: false,
+      runId,
+      processedCount,
+      insertedCount,
+      updatedCount,
+      skippedCount,
+      message: `Multi-prodi sync gagal: ${msg}`,
+      errors: [...errors, msg],
+    };
+  }
+}
