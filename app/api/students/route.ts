@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses data mahasiswa';
+    console.error('[API /api/students] Gagal memproses permintaan pencarian:', message);
     return NextResponse.json(
       {
         data: [],
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
         message,
         error: message,
       },
-      { status: 500 }
+      { status: 502 }
     );
   }
 }

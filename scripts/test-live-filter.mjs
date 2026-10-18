@@ -1,20 +1,35 @@
 import fs from 'fs';
 
-const BASE_URL = 'https://pddikti.kemdiktisaintek.go.id';
-
-const HEADERS = {
-  'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Referer': `${BASE_URL}/`,
-  'Origin': BASE_URL,
-};
-
 const acehInstitutions = JSON.parse(fs.readFileSync('lib/data/aceh-institutions.json', 'utf8'));
 
 function normalizeCampusName(name) {
   if (!name) return '';
   return name.toUpperCase().replace(/\s+/g, ' ').replace(/[^A-Z0-9 ]/g, '').trim();
+}
+
+function expandAcronyms(str) {
+  if (!str) return '';
+  let s = ' ' + normalizeCampusName(str) + ' ';
+  const map = [
+    [/\bSTIKES\b/g, 'SEKOLAH TINGGI ILMU KESEHATAN'],
+    [/\bSTIM\b/g, 'SEKOLAH TINGGI ILMU MANAJEMEN'],
+    [/\bSTKIP\b/g, 'SEKOLAH TINGGI KEGURUAN DAN ILMU PENDIDIKAN'],
+    [/\bSTAI\b/g, 'SEKOLAH TINGGI AGAMA ISLAM'],
+    [/\bSTAIN\b/g, 'SEKOLAH TINGGI AGAMA ISLAM NEGERI'],
+    [/\bIAI\b/g, 'INSTITUT AGAMA ISLAM'],
+    [/\bIAIN\b/g, 'INSTITUT AGAMA ISLAM NEGERI'],
+    [/\bUIN\b/g, 'UNIVERSITAS ISLAM NEGERI'],
+    [/\bUNIV\b/g, 'UNIVERSITAS'],
+    [/\bPOLTEK\b/g, 'POLITEKNIK'],
+    [/\bAKBID\b/g, 'AKADEMI KEBIDANAN'],
+    [/\bAKPER\b/g, 'AKADEMI KEPERAWATAN'],
+    [/\bAKFAR\b/g, 'AKADEMI FARMASI'],
+    [/\bPOLTEKKES\b/g, 'POLITEKNIK KESEHATAN'],
+  ];
+  for (const [rgx, rep] of map) {
+    s = s.replace(rgx, rep);
+  }
+  return normalizeCampusName(s);
 }
 
 function inferTahunMasuk(nim) {
@@ -33,88 +48,147 @@ function inferTahunMasuk(nim) {
 }
 
 const acehNormMap = new Map();
+const acehExpandedMap = new Map();
+
 const acehList = acehInstitutions.map((inst) => {
   const normNama = normalizeCampusName(inst.nama);
+  const expNama = expandAcronyms(inst.nama);
   const normSingkat = inst.nama_singkat ? normalizeCampusName(inst.nama_singkat) : '';
+  const expSingkat = inst.nama_singkat ? expandAcronyms(inst.nama_singkat) : '';
+
   if (normNama) acehNormMap.set(normNama, inst);
   if (normSingkat) acehNormMap.set(normSingkat, inst);
-  return { ...inst, normNama, normSingkat };
+  if (expNama) acehExpandedMap.set(expNama, inst);
+  if (expSingkat) acehExpandedMap.set(expSingkat, inst);
+
+  return {
+    ...inst,
+    normNama,
+    expNama,
+    normSingkat,
+    expSingkat,
+  };
 });
 
 function findAcehInstitution(namaPt, sinkatanPt) {
   const normPt = normalizeCampusName(namaPt);
+  const expPt = expandAcronyms(namaPt);
   const normSingkat = normalizeCampusName(sinkatanPt);
+  const expSingkat = expandAcronyms(sinkatanPt);
+
   if (normPt && acehNormMap.has(normPt)) return acehNormMap.get(normPt);
+  if (expPt && acehExpandedMap.has(expPt)) return acehExpandedMap.get(expPt);
   if (normSingkat && acehNormMap.has(normSingkat)) return acehNormMap.get(normSingkat);
+  if (expSingkat && acehExpandedMap.has(expSingkat)) return acehExpandedMap.get(expSingkat);
+
   for (const inst of acehList) {
-    if (inst.normNama && normPt) {
-      if (normPt.includes(inst.normNama) || inst.normNama.includes(normPt)) return inst;
+    if (inst.normNama && normPt && (normPt.includes(inst.normNama) || inst.normNama.includes(normPt))) {
+      return inst;
+    }
+    if (inst.expNama && expPt && (expPt.includes(inst.expNama) || inst.expNama.includes(expPt))) {
+      return inst;
     }
   }
+
   return null;
 }
 
-async function searchLive(keyword) {
-  const url = `${BASE_URL}/api/pencarian/mhs/${encodeURIComponent(keyword)}`;
-  const res = await fetch(url, { headers: HEADERS });
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
-  }
-  const json = await res.json();
-  const rawList = json.data || json || [];
-  
-  const filtered = [];
-  const nonAcehCount = [];
+const GATEWAYS = [
+  {
+    name: 'pddikti.rone.dev',
+    getUrl: (kw) => `https://pddikti.rone.dev/api/search/mhs/${encodeURIComponent(kw)}/`,
+    headers: { 'Accept': 'application/json' },
+  },
+  {
+    name: 'pddikti.fastapicloud.dev',
+    getUrl: (kw) => `https://pddikti.fastapicloud.dev/api/search/mhs/${encodeURIComponent(kw)}/`,
+    headers: { 'Accept': 'application/json' },
+  },
+  {
+    name: 'pddikti.kemdiktisaintek.go.id',
+    getUrl: (kw) => `https://pddikti.kemdiktisaintek.go.id/api/pencarian/mhs/${encodeURIComponent(kw)}`,
+    headers: {
+      'Accept': 'application/json, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Referer': 'https://pddikti.kemdiktisaintek.go.id/',
+    },
+  },
+];
 
-  for (const item of rawList) {
-    const matched = findAcehInstitution(item.nama_pt, item.sinkatan_pt);
-    if (matched) {
-      filtered.push({
-        nim: item.nim,
-        nama: item.nama,
-        prodi: item.nama_prodi,
-        nama_pt: matched.nama,
-        kode_pt: matched.kode_pt,
-        tahun_masuk: inferTahunMasuk(item.nim),
-      });
-    } else {
-      nonAcehCount.push(item.nama_pt);
+async function fetchFromGateways(keyword) {
+  for (const gw of GATEWAYS) {
+    const url = gw.getUrl(keyword);
+    console.log(`[Coba Gateway] ${gw.name} -> ${url}`);
+    try {
+      const res = await fetch(url, { headers: gw.headers });
+      if (!res.ok) {
+        console.log(`   ${gw.name} Status: HTTP ${res.status}`);
+        continue;
+      }
+      const json = await res.json();
+      const rawList = Array.isArray(json) ? json : (json.data || json.mahasiswa || []);
+      console.log(`   ${gw.name} BERHASIL (HTTP 200) -> Menerima ${rawList.length} data mahasiswa.`);
+      return { gateway: gw.name, data: rawList };
+    } catch (e) {
+      console.log(`   ${gw.name} Error: ${e.message}`);
     }
   }
-
-  return {
-    keyword,
-    rawTotal: rawList.length,
-    acehTotal: filtered.length,
-    sampleAceh: filtered.slice(0, 3),
-    sampleNonAcehRejected: nonAcehCount.slice(0, 3),
-  };
+  return { gateway: 'None', data: [] };
 }
 
 async function main() {
-  console.log('Testing live PDDikti query & strict Aceh filtering:');
-  const queries = ['Muhammad', 'Teuku', 'Cut', '217410101005'];
+  console.log('====================================================');
+  console.log('PENGUJIAN BERJENJANG GATEWAY PDDIKTI & FILTER ACEH');
+  console.log('====================================================\n');
 
-  for (const q of queries) {
-    console.log(`\n=== Keyword: "${q}" ===`);
-    try {
-      const res = await searchLive(q);
-      console.log(`Total dari API PDDikti: ${res.rawTotal}`);
-      console.log(`Total setelah filter kampus Aceh: ${res.acehTotal}`);
-      if (res.sampleAceh.length > 0) {
-        console.log('Sampel hasil diterima (Aceh):');
-        res.sampleAceh.forEach((s, idx) => {
-          console.log(`  [${idx + 1}] NIM: ${s.nim} | Nama: ${s.nama} | Kampus: ${s.nama_pt} (${s.kode_pt}) | Prodi: ${s.prodi} | Thn: ${s.tahun_masuk}`);
+  const testKeywords = ['Teuku', 'Cut', '217410101005'];
+
+  for (const kw of testKeywords) {
+    console.log(`\n=== Pengujian Kata Kunci: "${kw}" ===`);
+    const { gateway, data } = await fetchFromGateways(kw);
+    console.log(`Gateway yang berhasil: ${gateway}`);
+    console.log(`Total mentah dari gateway: ${data.length}`);
+
+    const acehMatches = [];
+    const nonAcehRejected = [];
+
+    for (const item of data) {
+      const nama = item.nama || item.nama_mahasiswa || '';
+      const nim = item.nim || item.nomor_induk || '';
+      const namaPt = item.nama_pt || item.namapt || item.pt || '';
+      const singkatanPt = item.sinkatan_pt || item.singkatan_pt || item.singkatan || '';
+      const prodi = item.nama_prodi || item.namaprodi || item.prodi || '-';
+
+      const match = findAcehInstitution(namaPt, singkatanPt);
+      if (match) {
+        acehMatches.push({
+          nim,
+          nama,
+          nama_pt: match.nama,
+          kode_pt: match.kode_pt,
+          prodi,
+          tahun_masuk: inferTahunMasuk(nim),
         });
+      } else {
+        nonAcehRejected.push(namaPt);
       }
-      if (res.sampleNonAcehRejected.length > 0) {
-        console.log('Sampel kampus luar Aceh yang berhasil difilter (ditolak):', res.sampleNonAcehRejected.join(', '));
-      }
-    } catch (e) {
-      console.error('Error:', e.message);
     }
-    await new Promise(r => setTimeout(r, 1000));
+
+    console.log(`Total mahasiswa perguruan tinggi Aceh yang lolos: ${acehMatches.length}`);
+    if (acehMatches.length > 0) {
+      console.log('Sampel hasil diterima (3 teratas):');
+      acehMatches.slice(0, 3).forEach((s, idx) => {
+        console.log(`  [${idx + 1}] NIM: ${s.nim} | Nama: ${s.nama} | Kampus: ${s.nama_pt} (${s.kode_pt}) | Prodi: ${s.prodi}`);
+      });
+    }
+    if (nonAcehRejected.length > 0) {
+      console.log(`Total disaring keluar (luar Aceh): ${nonAcehRejected.length}. Sampel: ${nonAcehRejected.slice(0, 2).join(', ')}`);
+    }
   }
+
+  console.log('\n====================================================');
+  console.log('PENGUJIAN BERHASIL SELESAI');
+  console.log('====================================================');
 }
 
 main();

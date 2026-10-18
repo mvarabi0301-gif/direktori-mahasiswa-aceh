@@ -2,7 +2,7 @@ import { StudentPublic } from '@/lib/types';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import acehInstitutionsData from '@/lib/data/aceh-institutions.json';
 
-const DEFAULT_PDDIKTI_BASE = 'https://pddikti.kemdiktisaintek.go.id';
+const BASE_URL = 'https://pddikti.kemdiktisaintek.go.id';
 
 export interface AcehInstitutionEntry {
   kode_pt: string;
@@ -12,16 +12,51 @@ export interface AcehInstitutionEntry {
 
 const acehInstitutions: AcehInstitutionEntry[] = acehInstitutionsData;
 
+export function expandAcronyms(str?: string | null): string {
+  if (!str) return '';
+  let s = ' ' + normalizeCampusName(str) + ' ';
+  const map: Array<[RegExp, string]> = [
+    [/\bSTIKES\b/g, 'SEKOLAH TINGGI ILMU KESEHATAN'],
+    [/\bSTIM\b/g, 'SEKOLAH TINGGI ILMU MANAJEMEN'],
+    [/\bSTKIP\b/g, 'SEKOLAH TINGGI KEGURUAN DAN ILMU PENDIDIKAN'],
+    [/\bSTAI\b/g, 'SEKOLAH TINGGI AGAMA ISLAM'],
+    [/\bSTAIN\b/g, 'SEKOLAH TINGGI AGAMA ISLAM NEGERI'],
+    [/\bIAI\b/g, 'INSTITUT AGAMA ISLAM'],
+    [/\bIAIN\b/g, 'INSTITUT AGAMA ISLAM NEGERI'],
+    [/\bUIN\b/g, 'UNIVERSITAS ISLAM NEGERI'],
+    [/\bUNIV\b/g, 'UNIVERSITAS'],
+    [/\bPOLTEK\b/g, 'POLITEKNIK'],
+    [/\bAKBID\b/g, 'AKADEMI KEBIDANAN'],
+    [/\bAKPER\b/g, 'AKADEMI KEPERAWATAN'],
+    [/\bAKFAR\b/g, 'AKADEMI FARMASI'],
+    [/\bPOLTEKKES\b/g, 'POLITEKNIK KESEHATAN'],
+  ];
+  for (const [rgx, rep] of map) {
+    s = s.replace(rgx, rep);
+  }
+  return normalizeCampusName(s);
+}
+
 const acehNormMap = new Map<string, AcehInstitutionEntry>();
+const acehExpandedMap = new Map<string, AcehInstitutionEntry>();
+
 const acehList = acehInstitutions.map((inst) => {
   const normNama = normalizeCampusName(inst.nama);
+  const expNama = expandAcronyms(inst.nama);
   const normSingkat = inst.nama_singkat ? normalizeCampusName(inst.nama_singkat) : '';
+  const expSingkat = inst.nama_singkat ? expandAcronyms(inst.nama_singkat) : '';
+
   if (normNama) acehNormMap.set(normNama, inst);
   if (normSingkat) acehNormMap.set(normSingkat, inst);
+  if (expNama) acehExpandedMap.set(expNama, inst);
+  if (expSingkat) acehExpandedMap.set(expSingkat, inst);
+
   return {
     ...inst,
     normNama,
+    expNama,
     normSingkat,
+    expSingkat,
   };
 });
 
@@ -30,19 +65,24 @@ export function findAcehInstitution(
   sinkatanPt?: string | null
 ): AcehInstitutionEntry | null {
   const normPt = normalizeCampusName(namaPt);
+  const expPt = expandAcronyms(namaPt);
   const normSingkat = normalizeCampusName(sinkatanPt);
+  const expSingkat = expandAcronyms(sinkatanPt);
 
-  if (normPt && acehNormMap.has(normPt)) {
-    return acehNormMap.get(normPt)!;
-  }
-  if (normSingkat && acehNormMap.has(normSingkat)) {
-    return acehNormMap.get(normSingkat)!;
-  }
+  if (normPt && acehNormMap.has(normPt)) return acehNormMap.get(normPt)!;
+  if (expPt && acehExpandedMap.has(expPt)) return acehExpandedMap.get(expPt)!;
+  if (normSingkat && acehNormMap.has(normSingkat)) return acehNormMap.get(normSingkat)!;
+  if (expSingkat && acehExpandedMap.has(expSingkat)) return acehExpandedMap.get(expSingkat)!;
 
-  // Exact substring check if name contains or is contained in an official Aceh institution
+  // Substring checks both normal and expanded
   for (const inst of acehList) {
     if (inst.normNama && normPt) {
       if (normPt.includes(inst.normNama) || inst.normNama.includes(normPt)) {
+        return inst;
+      }
+    }
+    if (inst.expNama && expPt) {
+      if (expPt.includes(inst.expNama) || inst.expNama.includes(expPt)) {
         return inst;
       }
     }
@@ -55,8 +95,8 @@ const HEADERS = {
   'Accept': 'application/json, text/plain, */*',
   'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  'Referer': `${DEFAULT_PDDIKTI_BASE}/`,
-  'Origin': DEFAULT_PDDIKTI_BASE,
+  'Referer': `${BASE_URL}/`,
+  'Origin': BASE_URL,
   'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
   'Sec-Ch-Ua-Mobile': '?0',
   'Sec-Ch-Ua-Platform': '"Windows"',
@@ -101,12 +141,33 @@ export function inferTahunMasuk(nim?: string | null): number | null {
 
 export interface PDDiktiStudentRaw {
   id?: string;
+  id_mhs?: string;
   nama?: string;
+  nama_mahasiswa?: string;
+  nama_mhs?: string;
   nim?: string;
+  nomor_induk?: string;
   nama_pt?: string;
+  namapt?: string;
+  pt?: string;
+  perguruan_tinggi?: string;
   sinkatan_pt?: string;
   singkatan_pt?: string;
+  singkatan?: string;
   nama_prodi?: string;
+  namaprodi?: string;
+  prodi?: string;
+  program_studi?: string;
+}
+
+export function extractStudentFields(item: PDDiktiStudentRaw) {
+  const nama = cleanString(item.nama || item.nama_mahasiswa || item.nama_mhs);
+  const nim = cleanString(item.nim || item.nomor_induk);
+  const namaPt = cleanString(item.nama_pt || item.namapt || item.pt || item.perguruan_tinggi);
+  const singkatanPt = cleanString(item.sinkatan_pt || item.singkatan_pt || item.singkatan);
+  const prodi = cleanString(item.nama_prodi || item.namaprodi || item.prodi || item.program_studi) || '-';
+  const id = cleanString(item.id || item.id_mhs);
+  return { nama, nim, namaPt, singkatanPt, prodi, id };
 }
 
 export interface LiveSearchResult {
@@ -117,129 +178,129 @@ export interface LiveSearchResult {
   totalPages: number;
   isCapped: boolean;
   source: 'pddikti_live' | 'supabase_db';
+  gatewayUsed?: string;
   message?: string;
 }
 
-/**
- * Resolusi URL PDDikti: Menggunakan PDDIKTI_PROXY_URL jika dikonfigurasi, atau langsung ke API PDDikti
- */
-export function resolvePDDiktiUrl(endpoint: string): { url: string; isProxied: boolean; headers: Record<string, string> } {
-  const proxyUrl = process.env.PDDIKTI_PROXY_URL?.trim();
-  const proxyKey = process.env.PDDIKTI_PROXY_KEY?.trim();
-
-  const reqHeaders: Record<string, string> = { ...HEADERS };
-
-  if (proxyUrl) {
-    let resolvedUrl: string;
-    if (proxyUrl.includes('{endpoint}')) {
-      resolvedUrl = proxyUrl.replace('{endpoint}', endpoint.replace(/^\//, ''));
-    } else {
-      const base = proxyUrl.replace(/\/+$/, '');
-      resolvedUrl = `${base}${endpoint}`;
-    }
-
-    if (proxyKey) {
-      reqHeaders['x-proxy-key'] = proxyKey;
-      reqHeaders['Authorization'] = `Bearer ${proxyKey}`;
-    }
-
-    return { url: resolvedUrl, isProxied: true, headers: reqHeaders };
-  }
-
-  return { url: `${DEFAULT_PDDIKTI_BASE}${endpoint}`, isProxied: false, headers: reqHeaders };
+interface GatewayConfig {
+  name: string;
+  getUrl: (kw: string) => string;
+  headers?: Record<string, string>;
 }
 
-/**
- * Membangun strategi query bertarget ke API PDDikti untuk mengatasi batas ~100 data per permintaan
- */
-export function buildTargetedSearchQueries(query: string, campusName?: string): string[] {
-  const cleanQ = cleanString(query);
-  if (!cleanQ) return [];
-
-  // Jika query adalah digit murni (NIM), jangan tambahkan variasi kata kampus
-  const isNimQuery = /^\d+$/.test(cleanQ);
-  if (isNimQuery) {
-    return [cleanQ];
-  }
-
-  if (campusName && campusName.trim() !== '') {
-    const cleanCampus = campusName.trim();
-    const queries = [cleanQ];
-    const inst = findAcehInstitution(cleanCampus);
-    if (!cleanQ.toLowerCase().includes(cleanCampus.toLowerCase())) {
-      queries.push(`${cleanQ} ${cleanCampus}`);
-    }
-    if (inst?.nama_singkat && !cleanQ.toUpperCase().includes(inst.nama_singkat.toUpperCase())) {
-      queries.push(`${cleanQ} ${inst.nama_singkat}`);
-    }
-    return Array.from(new Set(queries));
-  }
-
-  const lowerQ = cleanQ.toLowerCase();
-  const variations: string[] = [cleanQ];
-  const targets = ['Aceh', 'Syiah Kuala', 'Malikussaleh', 'Teuku Umar', 'Lhokseumawe'];
-
-  for (const t of targets) {
-    if (!lowerQ.includes(t.toLowerCase())) {
-      variations.push(`${cleanQ} ${t}`);
-    }
-    if (variations.length >= 5) break;
-  }
-
-  return variations;
-}
+const GATEWAYS: GatewayConfig[] = [
+  // 1. Gateway Utama (Sivitas API Primary): pddikti.rone.dev
+  {
+    name: 'pddikti.rone.dev (Sivitas API)',
+    getUrl: (kw: string) => `https://pddikti.rone.dev/api/search/mhs/${encodeURIComponent(kw)}/`,
+    headers: {
+      'Accept': 'application/json, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DirektoriMahasiswaAceh/1.0',
+    },
+  },
+  // 2. Gateway Alternatif (Sivitas API Fallback): pddikti.fastapicloud.dev
+  {
+    name: 'pddikti.fastapicloud.dev (Sivitas Fallback)',
+    getUrl: (kw: string) => `https://pddikti.fastapicloud.dev/api/search/mhs/${encodeURIComponent(kw)}/`,
+    headers: {
+      'Accept': 'application/json, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DirektoriMahasiswaAceh/1.0',
+    },
+  },
+  // 3. Upstream Langsung: pddikti.kemdiktisaintek.go.id
+  {
+    name: 'pddikti.kemdiktisaintek.go.id (Official Public API)',
+    getUrl: (kw: string) => `https://pddikti.kemdiktisaintek.go.id/api/pencarian/mhs/${encodeURIComponent(kw)}`,
+    headers: HEADERS,
+  },
+];
 
 /**
- * Panggil API PDDikti secara langsung atau melalui upstream proxy dengan timeout
+ * Panggil gateway pencarian secara berjenjang (Priority 1 -> 2 -> 3)
  */
-async function fetchPDDiktiJson<T>(endpoint: string, timeoutMs = 9000): Promise<{ data: T | null; error?: string }> {
-  const { url, isProxied, headers } = resolvePDDiktiUrl(endpoint);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+async function fetchStudentsFromAnyGateway(
+  keyword: string,
+  timeoutMs = 7000
+): Promise<{
+  data: PDDiktiStudentRaw[] | null;
+  gatewayUsed?: string;
+  error?: string;
+  details?: Record<string, string>;
+}> {
+  const errors: Record<string, string> = {};
 
-  try {
-    const res = await fetch(url, {
-      headers,
-      signal: controller.signal,
-      cache: 'no-store',
-    });
+  for (const gw of GATEWAYS) {
+    const url = gw.getUrl(keyword);
+    console.log(`[PDDikti Multi-Gateway] Menghubungi: ${gw.name}...`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    clearTimeout(timeoutId);
+    try {
+      const res = await fetch(url, {
+        headers: gw.headers || { 'Accept': 'application/json' },
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      if (res.status === 429) {
-        return { data: null, error: 'Batas frekuensi permintaan API PDDikti tercapai (HTTP 429). Silakan tunggu sejenak.' };
+      const status = res.status;
+      if (!res.ok) {
+        let errSnippet = `HTTP ${status}`;
+        try {
+          const errJson = await res.json();
+          if (errJson?.status?.message) {
+            errSnippet += ` (${errJson.status.message})`;
+          } else if (errJson?.message) {
+            errSnippet += ` (${errJson.message})`;
+          }
+        } catch {
+          if (res.headers.get('cf-mitigated') === 'challenge') {
+            errSnippet += ' (Cloudflare Managed Challenge / Bot Protection)';
+          }
+        }
+        console.warn(`[PDDikti Multi-Gateway] ${gw.name} gagal: ${errSnippet}`);
+        errors[gw.name] = errSnippet;
+        continue;
       }
-      if (res.status === 403) {
-        const isChallenge = res.headers.get('cf-mitigated') === 'challenge';
-        const detail = isChallenge
-          ? 'Proteksi Cloudflare Managed Challenge (WAF Kemdiktisaintek) mendeteksi IP server cloud Vercel'
-          : 'Firewall Kemdiktisaintek membatasi akses';
 
-        const proxyHint = isProxied
-          ? 'Periksa konfigurasi upstream server proxy Anda.'
-          : 'Gunakan tombol arsip database terverifikasi, atau konfigurasikan PDDIKTI_PROXY_URL pada environment variable server jika memiliki upstream proxy berlokasi di Indonesia.';
-
-        return {
-          data: null,
-          error: `API PDDikti membatasi akses (${detail} - HTTP 403). Pencarian langsung tidak dapat diproses dari server cloud ini. ${proxyHint}`,
-        };
+      // Berhasil 200 OK
+      const json = await res.json();
+      let rawList: PDDiktiStudentRaw[] = [];
+      if (Array.isArray(json)) {
+        rawList = json;
+      } else if (Array.isArray(json.data)) {
+        rawList = json.data;
+      } else if (json.data && Array.isArray(json.data.mahasiswa)) {
+        rawList = json.data.mahasiswa;
+      } else if (Array.isArray(json.mahasiswa)) {
+        rawList = json.mahasiswa;
       }
-      return { data: null, error: `API PDDikti merespons kode HTTP ${res.status}.` };
+
+      console.log(`[PDDikti Multi-Gateway] ${gw.name} BERHASIL: menerima ${rawList.length} data mahasiswa mentah.`);
+      return {
+        data: rawList,
+        gatewayUsed: gw.name,
+      };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const msg = err instanceof Error
+        ? (err.name === 'AbortError' ? `Timeout > ${timeoutMs / 1000}s` : err.message)
+        : String(err);
+      console.warn(`[PDDikti Multi-Gateway] ${gw.name} exception: ${msg}`);
+      errors[gw.name] = msg;
     }
-
-    const json = await res.json();
-    return { data: (json.data ?? json) as T };
-  } catch (err) {
-    clearTimeout(timeoutId);
-    if (err instanceof Error) {
-      if (err.name === 'AbortError') {
-        return { data: null, error: `Permintaan ke server PDDikti melampaui batas waktu (${timeoutMs / 1000} detik). Silakan coba lagi.` };
-      }
-      return { data: null, error: `Gagal menghubungi API PDDikti: ${err.message}` };
-    }
-    return { data: null, error: 'Terjadi kegagalan komunikasi dengan API PDDikti.' };
   }
+
+  // Jika semua gateway gagal
+  const detailList = Object.entries(errors)
+    .map(([gwName, errMsg]) => `${gwName}: ${errMsg}`)
+    .join(' | ');
+
+  return {
+    data: null,
+    error: `Semua gateway API PDDikti gagal diakses (${detailList}). Silakan gunakan opsi pencarian arsip database terverifikasi.`,
+    details: errors,
+  };
 }
 
 /**
@@ -272,6 +333,7 @@ async function cacheStudentsToSupabase(students: StudentPublic[]): Promise<void>
       }));
 
     if (payload.length > 0) {
+      // Non-blocking upsert
       await client.from('students').upsert(payload, { onConflict: 'kode_pt,nim' });
     }
   } catch (err) {
@@ -281,7 +343,7 @@ async function cacheStudentsToSupabase(students: StudentPublic[]): Promise<void>
 
 /**
  * Pencarian Mahasiswa Langsung ke API PDDikti
- * Mendukung pencarian bertarget, concurrency terkontrol, deduplikasi akurat, dan validasi institusi Aceh
+ * Mendukung pencarian global (tanpa kampus) atau tersaring per kampus
  */
 export async function searchStudentsLivePDDikti(params: {
   query: string;
@@ -311,11 +373,30 @@ export async function searchStudentsLivePDDikti(params: {
     };
   }
 
-  // Resolusi nama kampus dan kode PT untuk validasi ketat
+  // Siapkan kata kunci pencarian API PDDikti
+  let searchKeyword = query;
+  if (!searchKeyword && campusName) {
+    searchKeyword = campusName;
+  }
+
+  const { data: rawList, error, gatewayUsed } = await fetchStudentsFromAnyGateway(searchKeyword, 7000);
+
+  if (error || !rawList) {
+    throw new Error(error || 'Tidak menerima data dari API PDDikti');
+  }
+
+  const isCapped = rawList.length >= 100;
+
+  // Resolusi nama kampus dan kode PT untuk validasi ketat jika kampus dipilih
+  let normTargetPt = '';
+  let normTargetSingkat = '';
+  if (campusName) {
+    normTargetPt = normalizeCampusName(campusName);
+  }
+
+  // Jika kode_pt diberikan tapi campusName belum, cari nama institusi di database Supabase
   let resolvedKodePt = kodePt;
   let resolvedNamaPt = campusName;
-  let normTargetPt = campusName ? normalizeCampusName(campusName) : '';
-  let targetInst: AcehInstitutionEntry | null = campusName ? findAcehInstitution(campusName) : null;
 
   if (kodePt && !campusName) {
     try {
@@ -329,7 +410,7 @@ export async function searchStudentsLivePDDikti(params: {
         if (inst) {
           resolvedNamaPt = inst.nama;
           normTargetPt = normalizeCampusName(inst.nama);
-          targetInst = inst;
+          if (inst.nama_singkat) normTargetSingkat = normalizeCampusName(inst.nama_singkat);
         }
       }
     } catch {
@@ -337,70 +418,12 @@ export async function searchStudentsLivePDDikti(params: {
     }
   }
 
-  if (targetInst && !resolvedKodePt) {
-    resolvedKodePt = targetInst.kode_pt;
-  }
-
-  const normTargetSingkat = targetInst?.nama_singkat ? normalizeCampusName(targetInst.nama_singkat) : '';
-
-  // Siapkan kata kunci pencarian API PDDikti
-  let searchKeyword = query;
-  if (!searchKeyword && resolvedNamaPt) {
-    searchKeyword = resolvedNamaPt;
-  }
-
-  const searchQueries = buildTargetedSearchQueries(searchKeyword, resolvedNamaPt);
-
-  // Jalankan query secara konkuren dengan concurrency limit terkontrol (2 per batch)
-  const rawResults: PDDiktiStudentRaw[] = [];
-  let anySuccess = false;
-  let lastError: string | undefined;
-  let isCapped = false;
-
-  const batchSize = 2;
-  for (let i = 0; i < searchQueries.length; i += batchSize) {
-    const batch = searchQueries.slice(i, i + batchSize);
-    const batchPromises = batch.map((kw) => {
-      const endpoint = `/api/pencarian/mhs/${encodeURIComponent(kw)}`;
-      return fetchPDDiktiJson<PDDiktiStudentRaw[]>(endpoint, 9000);
-    });
-
-    const batchResults = await Promise.allSettled(batchPromises);
-
-    for (const res of batchResults) {
-      if (res.status === 'fulfilled') {
-        if (res.value.data) {
-          anySuccess = true;
-          const items = Array.isArray(res.value.data) ? res.value.data : [];
-          if (items.length >= 100) isCapped = true;
-          rawResults.push(...items);
-        } else if (res.value.error) {
-          lastError = res.value.error;
-        }
-      } else {
-        lastError = res.reason instanceof Error ? res.reason.message : 'Kegagalan permintaan pencarian';
-      }
-    }
-
-    if (i + batchSize < searchQueries.length) {
-      await new Promise((r) => setTimeout(r, 120));
-    }
-  }
-
-  if (!anySuccess) {
-    throw new Error(lastError || 'Tidak menerima data dari API PDDikti');
-  }
-
-  // Filter hasil dari respons API PDDikti dan hilangkan duplikasi
+  // Filter hasil dari respons API PDDikti
   const filteredStudents: StudentPublic[] = [];
   const seenNims = new Set<string>();
 
-  for (const item of rawResults) {
-    const nim = cleanString(item.nim);
-    const nama = cleanString(item.nama);
-    const studentPt = cleanString(item.nama_pt);
-    const studentSingkat = cleanString(item.sinkatan_pt || item.singkatan_pt);
-    const prodi = cleanString(item.nama_prodi) || '-';
+  for (const item of rawList) {
+    const { nama, nim, namaPt: studentPt, singkatanPt: studentSingkat, prodi, id: rawId } = extractStudentFields(item);
 
     if (!nim || !nama) continue;
 
@@ -419,7 +442,6 @@ export async function searchStudentsLivePDDikti(params: {
       if (!matchesCampus) {
         continue; // Lewati mahasiswa kampus lain
       }
-      matchedAcehInst = findAcehInstitution(studentPt, studentSingkat) || targetInst;
     } else {
       matchedAcehInst = findAcehInstitution(studentPt, studentSingkat);
       if (!matchedAcehInst) {
@@ -444,8 +466,8 @@ export async function searchStudentsLivePDDikti(params: {
       }
     }
 
-    // Deduplikasi intra-hasil berdasarkan NIM dan Identitas Kampus
-    const dedupeKey = `${nim.toUpperCase()}-${studentPt.toUpperCase()}`;
+    // Deduplikasi intra-hasil
+    const dedupeKey = `${nim}-${studentPt}`;
     if (seenNims.has(dedupeKey)) continue;
     seenNims.add(dedupeKey);
 
@@ -453,7 +475,7 @@ export async function searchStudentsLivePDDikti(params: {
     const studentNamaPt = studentPt || resolvedNamaPt || matchedAcehInst?.nama || 'Perguruan Tinggi';
 
     filteredStudents.push({
-      id: item.id || `live-${nim}-${studentKodePt}`,
+      id: rawId || `live-${nim}-${studentKodePt}`,
       kode_pt: studentKodePt,
       nama_pt: studentNamaPt,
       nim,
@@ -485,8 +507,9 @@ export async function searchStudentsLivePDDikti(params: {
     totalPages,
     isCapped,
     source: 'pddikti_live',
+    gatewayUsed,
     message: isCapped
-      ? 'Hasil pencarian API PDDikti dibatasi sekitar ~100 data per permintaan oleh kementerian. Gunakan kata kunci yang lebih spesifik untuk mempersempit hasil.'
+      ? 'Hasil pencarian API PDDikti dibatasi maksimal 100 data oleh kementerian. Gunakan kata kunci yang lebih spesifik untuk mempersempit hasil.'
       : undefined,
   };
 }

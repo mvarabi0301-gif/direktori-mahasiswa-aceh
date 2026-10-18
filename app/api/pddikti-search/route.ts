@@ -40,13 +40,7 @@ export async function GET(request: Request) {
   }
 
   const encoded = encodeURIComponent(keyword.trim());
-  const endpoint = `/api/pencarian/mhs/${encoded}`;
-  const proxyUrl = process.env.PDDIKTI_PROXY_URL?.trim();
-  const targetUrl = proxyUrl
-    ? proxyUrl.includes('{endpoint}')
-      ? proxyUrl.replace('{endpoint}', endpoint.replace(/^\//, ''))
-      : `${proxyUrl.replace(/\/+$/, '')}${endpoint}`
-    : `${PDDIKTI_BASE}${endpoint}`;
+  const targetUrl = PDDIKTI_BASE + '/api/pencarian/mhs/' + encoded;
 
   const mode = searchParams.get('mode') || 'default';
   let headers: Record<string, string> = {
@@ -54,10 +48,6 @@ export async function GET(request: Request) {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   };
-
-  if (process.env.PDDIKTI_PROXY_KEY) {
-    headers['x-proxy-key'] = process.env.PDDIKTI_PROXY_KEY;
-  }
 
   if (mode === 'default') {
     headers = {
