@@ -1,41 +1,29 @@
 import React from 'react';
-import { GraduationCap, Database, ShieldCheck } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-emerald-900/10 bg-white/95 backdrop-blur-md shadow-sm">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16">
           {/* Identity & Logo */}
-          <div className="flex items-center space-x-3.5">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-800 via-emerald-700 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-900/20 ring-2 ring-emerald-500/20">
-              <GraduationCap className="w-7 h-7 text-amber-300 stroke-[2.2]" />
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-700 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+              <GraduationCap className="w-5 h-5 text-white stroke-[2]" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-xl tracking-tight text-slate-900">
-                  Direktori Mahasiswa <span className="text-emerald-700">Aceh</span>
-                </span>
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
-                  Resmi
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Pusat Basis Data & Verifikasi Akademik Mahasiswa Perguruan Tinggi di Aceh
+              <span className="font-bold text-base tracking-tight text-slate-900">
+                Direktori Mahasiswa <span className="text-emerald-700">Aceh</span>
+              </span>
+              <p className="text-xs text-slate-500 hidden sm:block leading-tight">
+                Basis Data Akademik Perguruan Tinggi di Aceh
               </p>
             </div>
           </div>
 
-          {/* Right Badges */}
-          <div className="flex items-center space-x-3">
-            <div className="hidden md:flex items-center space-x-2 text-xs font-medium text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-lg border border-slate-200">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Verifikasi Terbuka</span>
-            </div>
-            <div className="flex items-center space-x-1.5 text-xs font-semibold text-emerald-900 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-              <Database className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Supabase DB</span>
-            </div>
+          {/* Right: data source label */}
+          <div className="text-xs text-slate-500 hidden md:block">
+            Data bersumber dari <span className="font-semibold text-slate-700">PDDikti Kemdiktisaintek</span>
           </div>
         </div>
       </div>

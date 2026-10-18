@@ -5,10 +5,10 @@ import Navbar from '@/components/Navbar';
 import SearchFilterBar from '@/components/SearchFilterBar';
 import StudentTable from '@/components/StudentTable';
 import Pagination from '@/components/Pagination';
-import StatusNotice from '@/components/StatusNotice';
 import EmptyState from '@/components/EmptyState';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import { Institution, StudentPublic, StudentQueryResult } from '@/lib/types';
+import { Database, Wifi } from 'lucide-react';
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,10 +29,7 @@ export default function HomePage() {
 
   const [resultSource, setResultSource] = useState<'pddikti_live' | 'supabase_db'>('supabase_db');
   const [preferredSource, setPreferredSource] = useState<'auto' | 'supabase'>('auto');
-  const [isCapped, setIsCapped] = useState(false);
-  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
-  // Fetch students from server-side Supabase query or live PDDikti
   const fetchStudents = useCallback(async (forcedSrc?: 'auto' | 'supabase') => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -63,12 +60,7 @@ export default function HomePage() {
       setTotalCount(result.totalCount || 0);
       setTotalPages(result.totalPages || 0);
       setIsConfigured(result.isConfigured !== false);
-      setResultSource(result.source || (searchQuery.trim() ? 'pddikti_live' : 'supabase_db'));
-      setIsCapped(Boolean(result.isCapped));
-      setNoticeMessage(result.message || null);
-      if (result.message && !result.isConfigured) {
-        setErrorMessage(result.message);
-      }
+      setResultSource(result.source || 'supabase_db');
       setHasSearched(true);
     } catch (err) {
       console.error('Gagal mengambil data mahasiswa:', err);
@@ -78,12 +70,10 @@ export default function HomePage() {
     }
   }, [searchQuery, selectedCampus, selectedYear, selectedStatus, currentPage, pageSize, preferredSource]);
 
-  // Trigger query on parameter change
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  // Reset page to 1 when filters change
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     setPreferredSource('auto');
@@ -115,7 +105,6 @@ export default function HomePage() {
     setCurrentPage(1);
   };
 
-  // Download complete CSV of ALL results matching current query & filters
   const handleDownloadCsv = () => {
     setIsDownloadingCsv(true);
     try {
@@ -124,31 +113,32 @@ export default function HomePage() {
       if (selectedCampus?.kode_pt) params.set('kode_pt', selectedCampus.kode_pt);
       if (selectedYear) params.set('tahun_masuk', selectedYear);
       if (selectedStatus) params.set('status', selectedStatus);
-
-      // Trigger direct download via browser navigation
       window.location.href = `/api/students/export?${params.toString()}`;
     } finally {
       setTimeout(() => setIsDownloadingCsv(false), 2000);
     }
   };
 
+  // Show source badge only when results are visible
+  const showSourceBadge = hasSearched && !isLoading && students.length > 0;
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Title Section */}
-        <div className="text-center max-w-3xl mx-auto mb-8 space-y-2.5">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Penelusuran Direktori Mahasiswa Aceh
+
+        {/* Hero */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            Penelusuran Data Mahasiswa
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Akses informasi akademik resmi mahasiswa di seluruh perguruan tinggi Provinsi Aceh.
-            Cari secara global atau batasi penelusuran pada kampus tertentu.
+          <p className="mt-1 text-sm text-slate-500">
+            Telusuri mahasiswa aktif dan alumni di seluruh perguruan tinggi Provinsi Aceh berdasarkan nama atau NIM.
           </p>
         </div>
 
-        {/* Search & Filter Component */}
+        {/* Search & Filter */}
         <SearchFilterBar
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -165,57 +155,32 @@ export default function HomePage() {
           onDownloadCsv={handleDownloadCsv}
         />
 
-        {/* Status & Empirical Constraints Notice */}
-        <StatusNotice />
-
         {/* Results Area */}
-        <div className="mt-6 space-y-4">
-          {/* Live PDDikti / DB Source Notice */}
-          {searchQuery.trim() && !errorMessage && (
-            <div
-              className={`rounded-2xl p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm animate-in fade-in border ${
-                resultSource === 'pddikti_live'
-                  ? 'bg-emerald-50/90 border-emerald-200/90 text-emerald-950'
-                  : 'bg-indigo-50/90 border-indigo-200/90 text-indigo-950'
-              }`}
-            >
-              <div className="flex items-center space-x-2.5">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                    resultSource === 'pddikti_live' ? 'bg-emerald-500 animate-pulse' : 'bg-indigo-500'
-                  }`}
-                ></span>
-                <div>
-                  <span className={`font-bold ${resultSource === 'pddikti_live' ? 'text-emerald-900' : 'text-indigo-900'}`}>
-                    {resultSource === 'pddikti_live' ? 'Pencarian Langsung PDDikti:' : 'Arsip Database Terverifikasi:'}
-                  </span>{' '}
-                  <span>
-                    {resultSource === 'pddikti_live'
-                      ? 'Hasil penelusuran diperoleh secara real-time langsung dari server PDDikti Kemdiktisaintek.'
-                      : 'Menampilkan data dari 100.507 mahasiswa yang telah diverifikasi dari PDDikti di Supabase.'}
-                  </span>
-                </div>
-              </div>
-              {isCapped && (
-                <span className="text-amber-800 bg-amber-100/80 border border-amber-300 px-2.5 py-0.5 rounded-full font-semibold flex-shrink-0">
-                  Batas 100 data tercapai
+        <div className="mt-5 space-y-4">
+
+          {/* Source badge — small, non-intrusive */}
+          {showSourceBadge && (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">{totalCount.toLocaleString('id-ID')}</span> data ditemukan
+              </p>
+              {resultSource === 'pddikti_live' ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full">
+                  <Wifi className="w-3 h-3" />
+                  Sumber: Live PDDikti
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">
+                  <Database className="w-3 h-3" />
+                  Sumber: Arsip Database
                 </span>
               )}
             </div>
           )}
 
-          {noticeMessage && !errorMessage && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs flex items-center space-x-2">
-              <span className="font-semibold">Perhatian:</span>
-              <span>{noticeMessage}</span>
-            </div>
-          )}
-
+          {/* Main content */}
           {!isConfigured ? (
-            <EmptyState
-              type="unconfigured"
-              message={errorMessage || undefined}
-            />
+            <EmptyState type="unconfigured" />
           ) : errorMessage ? (
             <EmptyState
               type="error"
@@ -224,15 +189,6 @@ export default function HomePage() {
                 setPreferredSource('auto');
                 fetchStudents('auto');
               }}
-              onFallback={
-                searchQuery.trim()
-                  ? () => {
-                      setPreferredSource('supabase');
-                      fetchStudents('supabase');
-                    }
-                  : undefined
-              }
-              fallbackLabel="Cari di Arsip Database Terverifikasi (100.507 Mahasiswa)"
             />
           ) : isLoading ? (
             <LoadingSkeleton />
@@ -257,10 +213,7 @@ export default function HomePage() {
               />
             </>
           ) : hasSearched ? (
-            <EmptyState
-              type="not-found"
-              onReset={handleResetFilters}
-            />
+            <EmptyState type="not-found" onReset={handleResetFilters} />
           ) : (
             <EmptyState type="initial" />
           )}
@@ -268,17 +221,15 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
+      <footer className="border-t border-slate-200 bg-white py-5 mt-12 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>
-            © {new Date().getFullYear()} Direktori Mahasiswa Aceh. Dikelola untuk kepentingan verifikasi publik.
-          </p>
-          <div className="flex items-center space-x-4 text-slate-400">
-            <span>Next.js App Router</span>
-            <span>•</span>
+          <p>© {new Date().getFullYear()} Direktori Mahasiswa Aceh. Data akademik dari PDDikti Kemdiktisaintek.</p>
+          <div className="flex items-center space-x-3">
+            <span>Next.js</span>
+            <span>·</span>
             <span>TypeScript</span>
-            <span>•</span>
-            <span>Supabase PostgreSQL</span>
+            <span>·</span>
+            <span>Supabase</span>
           </div>
         </div>
       </footer>

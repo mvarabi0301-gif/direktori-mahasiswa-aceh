@@ -44,37 +44,26 @@ export default function EmptyState({
 
   if (type === 'error') {
     return (
-      <div className="w-full bg-white rounded-2xl border border-red-200 p-8 sm:p-12 text-center shadow-sm">
-        <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4">
-          <AlertCircle className="w-8 h-8 stroke-[1.8]" />
+      <div className="w-full bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center shadow-sm">
+        <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-7 h-7 stroke-[1.8]" />
         </div>
-        <h3 className="text-lg font-bold text-slate-900 mb-2">
-          Terjadi Kesalahan Saat Menghubungi API PDDikti
+        <h3 className="text-base font-bold text-slate-800 mb-2">
+          Data tidak tersedia saat ini
         </h3>
-        <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
-          {message || 'Tidak dapat terhubung ke server PDDikti Kemdiktisaintek saat ini.'}
+        <p className="text-sm text-slate-500 max-w-sm mx-auto mb-5">
+          Terjadi kendala saat mengambil data. Silakan coba kembali atau periksa koneksi Anda.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          {onRetry && (
-            <button
-              type="button"
-              onClick={onRetry}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm transition"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>Coba Lagi ke PDDikti</span>
-            </button>
-          )}
-          {onFallback && (
-            <button
-              type="button"
-              onClick={onFallback}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm transition"
-            >
-              <span>{fallbackLabel || 'Cari di Arsip Database (100.507 Mahasiswa)'}</span>
-            </button>
-          )}
-        </div>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm transition"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Coba Lagi</span>
+          </button>
+        )}
       </div>
     );
   }
