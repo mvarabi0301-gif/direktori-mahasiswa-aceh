@@ -188,32 +188,51 @@ interface GatewayConfig {
   headers?: Record<string, string>;
 }
 
-const GATEWAYS: GatewayConfig[] = [
+function getGateways(): GatewayConfig[] {
+  const list: GatewayConfig[] = [];
+
+  const customProxy = process.env.PDDIKTI_PROXY_URL || process.env.PDDIKTI_GATEWAY_URL;
+  if (customProxy) {
+    const cleanProxy = customProxy.replace(/\/+$/, '');
+    list.push({
+      name: `Custom Gateway Proxy (${cleanProxy})`,
+      getUrl: (kw: string) => `${cleanProxy}/api/search/mhs/${encodeURIComponent(kw)}/`,
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DirektoriMahasiswaAceh/1.0',
+      },
+    });
+  }
+
   // 1. Gateway Utama (Sivitas API Primary): pddikti.rone.dev
-  {
+  list.push({
     name: 'pddikti.rone.dev (Sivitas API)',
     getUrl: (kw: string) => `https://pddikti.rone.dev/api/search/mhs/${encodeURIComponent(kw)}/`,
     headers: {
       'Accept': 'application/json, text/plain, */*',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DirektoriMahasiswaAceh/1.0',
     },
-  },
+  });
+
   // 2. Gateway Alternatif (Sivitas API Fallback): pddikti.fastapicloud.dev
-  {
+  list.push({
     name: 'pddikti.fastapicloud.dev (Sivitas Fallback)',
     getUrl: (kw: string) => `https://pddikti.fastapicloud.dev/api/search/mhs/${encodeURIComponent(kw)}/`,
     headers: {
       'Accept': 'application/json, text/plain, */*',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) DirektoriMahasiswaAceh/1.0',
     },
-  },
+  });
+
   // 3. Upstream Langsung: pddikti.kemdiktisaintek.go.id
-  {
+  list.push({
     name: 'pddikti.kemdiktisaintek.go.id (Official Public API)',
     getUrl: (kw: string) => `https://pddikti.kemdiktisaintek.go.id/api/pencarian/mhs/${encodeURIComponent(kw)}`,
     headers: HEADERS,
-  },
-];
+  });
+
+  return list;
+}
 
 /**
  * Panggil gateway pencarian secara berjenjang (Priority 1 -> 2 -> 3)
@@ -228,8 +247,9 @@ async function fetchStudentsFromAnyGateway(
   details?: Record<string, string>;
 }> {
   const errors: Record<string, string> = {};
+  const gateways = getGateways();
 
-  for (const gw of GATEWAYS) {
+  for (const gw of gateways) {
     const url = gw.getUrl(keyword);
     console.log(`[PDDikti Multi-Gateway] Menghubungi: ${gw.name}...`);
     const controller = new AbortController();
