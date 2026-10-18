@@ -1,0 +1,917 @@
+[
+  {
+    "kode_pt": "344001",
+    "nama": "AKADEMI  KEPERAWATAN PEMKAB ACEH UTARA",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134054",
+    "nama": "Akademi Akupunktur Aceh",
+    "nama_singkat": "AAA"
+  },
+  {
+    "kode_pt": "134029",
+    "nama": "Akademi Analis Farmasi Dan Makanan Banda Aceh",
+    "nama_singkat": "AKAFARMA BANDA ACEH"
+  },
+  {
+    "kode_pt": "344008",
+    "nama": "AKADEMI ANALIS KESEHATAN PEMERINTAH ACEH",
+    "nama_singkat": "AKADEMI ANALIS KESEH"
+  },
+  {
+    "kode_pt": "134038",
+    "nama": "Akademi Farmasi YPPM Mandiri",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134028",
+    "nama": "Akademi Fisioterapi Harapan Bangsa Banda Aceh",
+    "nama_singkat": "AKFIS YHBD"
+  },
+  {
+    "kode_pt": "134051",
+    "nama": "AKADEMI FISIOTERAPI MUHAMMADIYAH ACEH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134031",
+    "nama": "Akademi Kebidanan Adhira Mustika Gayo",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134055",
+    "nama": "AKADEMI KEBIDANAN BUNGA BANGSA IDI",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134033",
+    "nama": "AKADEMI KEBIDANAN BUNGA BANGSA IDI",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134017",
+    "nama": "AKADEMI KEBIDANAN BUSTANUL ULUM LANGSA",
+    "nama_singkat": "AKBID YDB"
+  },
+  {
+    "kode_pt": "134032",
+    "nama": "Akademi Kebidanan Darul Husada",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134030",
+    "nama": "AKADEMI KEBIDANAN GAYO LUES",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134020",
+    "nama": "Akademi Kebidanan Harapan Ibu Langsa",
+    "nama_singkat": "AKBID HARAPAN IBU"
+  },
+  {
+    "kode_pt": "134056",
+    "nama": "AKADEMI KEBIDANAN KESEHATAN MASYARAKAT DAN TENAGA MEDIS MEULABOH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134039",
+    "nama": "AKADEMI KEBIDANAN MEDIKA SRI TAMIANG",
+    "nama_singkat": "AKBID MST"
+  },
+  {
+    "kode_pt": "134040",
+    "nama": "AKADEMI KEBIDANAN MUHAMMADIYAH BANDA ACEH",
+    "nama_singkat": "AKBID MUHAMMADIYAH B"
+  },
+  {
+    "kode_pt": "134027",
+    "nama": "Akademi Kebidanan Munawarrah Bireuen",
+    "nama_singkat": "AKBID MUNAWARRAH"
+  },
+  {
+    "kode_pt": "344007",
+    "nama": "AKADEMI KEBIDANAN PEMKAB ACEH TENGAH TAKENGON",
+    "nama_singkat": "AKBID PEMKAB ACEH TE"
+  },
+  {
+    "kode_pt": "344006",
+    "nama": "AKADEMI KEBIDANAN PEMKAB ACEH UTARA LHOKSEUMAWE",
+    "nama_singkat": "AKBID PEMKAB ACEH UT"
+  },
+  {
+    "kode_pt": "134037",
+    "nama": "Akademi Kebidanan Pidie Jaya",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134019",
+    "nama": "Akademi Kebidanan Saleha",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134041",
+    "nama": "AKADEMI KEPERAWATAN ABULYATAMA",
+    "nama_singkat": "AKPER ABULYATAMA"
+  },
+  {
+    "kode_pt": "134035",
+    "nama": "Akademi Keperawatan Ibnu Sina Kota Sabang",
+    "nama_singkat": "AKIS"
+  },
+  {
+    "kode_pt": "134045",
+    "nama": "AKADEMI KEPERAWATAN JABAL GHAFUR",
+    "nama_singkat": "AKPER JEGE"
+  },
+  {
+    "kode_pt": "134043",
+    "nama": "Akademi Keperawatan Kesdam Iskandar Muda Banda Aceh",
+    "nama_singkat": "AKIMBA"
+  },
+  {
+    "kode_pt": "134042",
+    "nama": "Akademi Keperawatan Kesdam Iskandar Muda Lhokseumawe",
+    "nama_singkat": "AKPER KESDAM IM LSM"
+  },
+  {
+    "kode_pt": "134052",
+    "nama": "AKADEMI KEPERAWATAN MUHAMMADIYAH BIREUEN",
+    "nama_singkat": "AKPER MUH BIREUEN"
+  },
+  {
+    "kode_pt": "344003",
+    "nama": "AKADEMI KEPERAWATAN PEMKAB ACEH SELATAN",
+    "nama_singkat": "AKPER PEMKAB ACEH SE"
+  },
+  {
+    "kode_pt": "344005",
+    "nama": "AKADEMI KEPERAWATAN PEMKAB ACEH TENGGARA",
+    "nama_singkat": "AKADEMI KEPERAWATAN"
+  },
+  {
+    "kode_pt": "344002",
+    "nama": "Akademi Keperawatan Pemkab Pidie Di Sigli",
+    "nama_singkat": "AKPER PEMKAB PIDIE"
+  },
+  {
+    "kode_pt": "134016",
+    "nama": "Akademi Keperawatan Teungku Fakinah Banda Aceh",
+    "nama_singkat": "AKPER TGK FAKINAH"
+  },
+  {
+    "kode_pt": "344004",
+    "nama": "AKADEMI KEPERAWATAN TJOET NYA' DHIEN BANDA ACEH",
+    "nama_singkat": "AKPER TND"
+  },
+  {
+    "kode_pt": "134015",
+    "nama": "Akademi Keperawatan Yappkes Aceh Singkil",
+    "nama_singkat": "AKPER YAPPKES SINGKI"
+  },
+  {
+    "kode_pt": "134044",
+    "nama": "AKADEMI KESEHATAN LINGKUNGAN JABAL GHAFUR",
+    "nama_singkat": "AKL-JG"
+  },
+  {
+    "kode_pt": "134008",
+    "nama": "Akademi Keuangan Perbankan Nusantara",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "006003",
+    "nama": "Akademi Komunitas Negeri Aceh Barat",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134001",
+    "nama": "AKADEMI MANAJEMEN BANDA ACEH",
+    "nama_singkat": "AMBA"
+  },
+  {
+    "kode_pt": "134012",
+    "nama": "Akademi Maritim Aceh Darussalam",
+    "nama_singkat": "AM-AD"
+  },
+  {
+    "kode_pt": "134007",
+    "nama": "AKADEMI PARIWISATA MUHAMMADIYAH BANDA ACEH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134047",
+    "nama": "AKADEMI PEREKAM DAN INFORMATIKA KESEHATAN SIHAT BEURATA BANDA ACEH",
+    "nama_singkat": "APIKES SIHAT BEURATA"
+  },
+  {
+    "kode_pt": "134005",
+    "nama": "Akademi Sekretari Manajemen Nusantara",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134048",
+    "nama": "AKADEMI TEKNIK ELEKTROMEDIK KUPULA ACEH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134025",
+    "nama": "AKADEMIK TEKNIK OTOMOTIF BANDA ACEH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "134009",
+    "nama": "AMIK JABAL GHAFUR",
+    "nama_singkat": "AMIK JABAL GHAFUR"
+  },
+  {
+    "kode_pt": "212038",
+    "nama": "INSTITUT AGAMA ISLAM (IAI) AL-AZIZIYAH SAMALANGA BIREUEN ACEH",
+    "nama_singkat": "IAI AL-AZIZIYAH"
+  },
+  {
+    "kode_pt": "212032",
+    "nama": "INSTITUT AGAMA ISLAM ALMUSLIM ACEH",
+    "nama_singkat": "IAI ALMUSLIM ACEH"
+  },
+  {
+    "kode_pt": "202025",
+    "nama": "Institut Agama Islam Negeri Langsa",
+    "nama_singkat": "IAIN LANGSA"
+  },
+  {
+    "kode_pt": "202037",
+    "nama": "INSTITUT AGAMA ISLAM NEGERI LHOKSEUMAWE",
+    "nama_singkat": "IAINMAL"
+  },
+  {
+    "kode_pt": "202047",
+    "nama": "Institut Agama Islam Negeri Takengon",
+    "nama_singkat": "IAIN TAKENGON"
+  },
+  {
+    "kode_pt": "212225",
+    "nama": "Institut Agama Islam Ummul Ayman Pidie Jaya",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "132001",
+    "nama": "Institut Ilmu Kesehatan dan Teknologi Nurdin Abdurrahman",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "002011",
+    "nama": "Institut Seni Budaya Indonesia Aceh",
+    "nama_singkat": "ISBI ACEH"
+  },
+  {
+    "kode_pt": "135001",
+    "nama": "Politeknik Aceh",
+    "nama_singkat": "POLITEKNIK ACEH"
+  },
+  {
+    "kode_pt": "135003",
+    "nama": "Politeknik Aceh Selatan",
+    "nama_singkat": "POLTAS"
+  },
+  {
+    "kode_pt": "135006",
+    "nama": "Politeknik Idi",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "135002",
+    "nama": "Politeknik Indonesia Venezuela",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "135005",
+    "nama": "Politeknik Kepulauan Simeulue",
+    "nama_singkat": "POLTEKSIM"
+  },
+  {
+    "kode_pt": "135004",
+    "nama": "Politeknik Kutaraja",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "005016",
+    "nama": "Politeknik Negeri Lhokseumawe",
+    "nama_singkat": "POLTEK LHOKSEUMAWE"
+  },
+  {
+    "kode_pt": "425016",
+    "nama": "Politeknik Pelayaran Malahayati",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "405001",
+    "nama": "Poltekkes Kemenkes Aceh",
+    "nama_singkat": "POLKESACEH"
+  },
+  {
+    "kode_pt": "213577",
+    "nama": "Sekolah Tinggi Agama Islam Aceh Tamiang",
+    "nama_singkat": "STAI ACEH TAMIANG"
+  },
+  {
+    "kode_pt": "213818",
+    "nama": "Sekolah Tinggi Agama Islam Darul Abrar Aceh Jaya",
+    "nama_singkat": "STAI DARUL ABRAR"
+  },
+  {
+    "kode_pt": "213814",
+    "nama": "Sekolah Tinggi Agama Islam Darul Qur`an Aceh Tenggara",
+    "nama_singkat": "STAI-DQ"
+  },
+  {
+    "kode_pt": "213659",
+    "nama": "Sekolah Tinggi Agama Islam Nurul Arafah Panton Labu Aceh Utara",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213281",
+    "nama": "Sekolah Tinggi Agama Islam Perguruan Tinggi Ilmu Al-Qur'an (STAI-PTIQ) Aceh",
+    "nama_singkat": "STAI-PTIQ"
+  },
+  {
+    "kode_pt": "133006",
+    "nama": "Sekolah Tinggi Ilmu Administrasi Iskandar Thani",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133034",
+    "nama": "Sekolah Tinggi Ilmu Administrasi Pelita Nusantara",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213620",
+    "nama": "Sekolah Tinggi Ilmu Al-Qur'an Darussalam Lhokseumawe Aceh",
+    "nama_singkat": "STIQ DARUSSALAM"
+  },
+  {
+    "kode_pt": "133001",
+    "nama": "SEKOLAH TINGGI ILMU EKONOMI INDONESIA BANDA ACEH",
+    "nama_singkat": "STIEI-BNA"
+  },
+  {
+    "kode_pt": "133039",
+    "nama": "SEKOLAH TINGGI ILMU EKONOMI KEBANGSAAN BIREUEN",
+    "nama_singkat": "STIE KEBANGSAAN"
+  },
+  {
+    "kode_pt": "133027",
+    "nama": "SEKOLAH TINGGI ILMU EKONOMI LHOKSEUMAWE",
+    "nama_singkat": "STIE LHOKSEUMAWE"
+  },
+  {
+    "kode_pt": "133003",
+    "nama": "Sekolah Tinggi Ilmu Ekonomi Sabang",
+    "nama_singkat": "STIES BANDA ACEH"
+  },
+  {
+    "kode_pt": "213743",
+    "nama": "Sekolah Tinggi Ilmu Ekonomi Syariah Serambi Mekkah Aceh Jaya",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133009",
+    "nama": "Sekolah Tinggi Ilmu Ekonomi YPHB",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133052",
+    "nama": "Sekolah Tinggi Ilmu Hukum Al-Banna",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133050",
+    "nama": "SEKOLAH TINGGI ILMU HUKUM KEBANGSAAN BIREUEN",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133011",
+    "nama": "Sekolah Tinggi Ilmu Hukum Muhammadiyah Takengon",
+    "nama_singkat": "STIHMAT"
+  },
+  {
+    "kode_pt": "133005",
+    "nama": "Sekolah Tinggi Ilmu Kehutanan Pante Kulu",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133021",
+    "nama": "SEKOLAH TINGGI ILMU KESEHATAN HARAPAN BANGSA",
+    "nama_singkat": "STIKES HARAPAN BANGS"
+  },
+  {
+    "kode_pt": "133054",
+    "nama": "SEKOLAH TINGGI ILMU KESEHATAN JABAL GHAFUR",
+    "nama_singkat": "STIKES JG"
+  },
+  {
+    "kode_pt": "133029",
+    "nama": "SEKOLAH TINGGI ILMU KESEHATAN LANGSA",
+    "nama_singkat": "STIKES LANGSA"
+  },
+  {
+    "kode_pt": "133053",
+    "nama": "SEKOLAH TINGGI ILMU KESEHATAN MUHAMMADIYAH ACEH",
+    "nama_singkat": "STIKES MUH ACEH"
+  },
+  {
+    "kode_pt": "133056",
+    "nama": "Sekolah Tinggi Ilmu Kesehatan Sihat Beurata Banda Aceh",
+    "nama_singkat": "YSB"
+  },
+  {
+    "kode_pt": "133023",
+    "nama": "SEKOLAH TINGGI ILMU KESEHATAN U BUDIYAH",
+    "nama_singkat": "STIKES U'BUDIYAH BAN"
+  },
+  {
+    "kode_pt": "133002",
+    "nama": "SEKOLAH TINGGI ILMU MANAJEMEN",
+    "nama_singkat": "STIM BANDA ACEH"
+  },
+  {
+    "kode_pt": "133013",
+    "nama": "Sekolah Tinggi Ilmu Manajemen Indonesia Meulaboh",
+    "nama_singkat": "STIMI MEULABOH"
+  },
+  {
+    "kode_pt": "133008",
+    "nama": "Sekolah Tinggi Ilmu Manajemen Pase",
+    "nama_singkat": "STIM PASE LANGSA"
+  },
+  {
+    "kode_pt": "133019",
+    "nama": "Sekolah Tinggi Ilmu Pertanian Yashafa",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133014",
+    "nama": "SEKOLAH TINGGI ILMU PSIKOLOGI HARAPAN BANGSA",
+    "nama_singkat": "STIP HARAPAN BANGSA"
+  },
+  {
+    "kode_pt": "213532",
+    "nama": "Sekolah Tinggi Ilmu Syari'ah (STIS) Nahdlatul Ulama Aceh",
+    "nama_singkat": "STISNU ACEH"
+  },
+  {
+    "kode_pt": "213525",
+    "nama": "Sekolah Tinggi Ilmu Syariah (STIS) Al-Aziziyah Sabang",
+    "nama_singkat": "STISA SABANG"
+  },
+  {
+    "kode_pt": "213523",
+    "nama": "Sekolah Tinggi Ilmu Syariah (STIS) Dayah Amal",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213531",
+    "nama": "Sekolah Tinggi Ilmu Syariah (STIS) Ummul Ayman Pidie Jaya",
+    "nama_singkat": "STIS-UA"
+  },
+  {
+    "kode_pt": "213704",
+    "nama": "SEKOLAH TINGGI ILMU SYARIAH SUBULUSSALAM",
+    "nama_singkat": "STIS SUBULUSSALAM"
+  },
+  {
+    "kode_pt": "214003",
+    "nama": "Sekolah Tinggi Ilmu Tarbiyah Al Washliyah Aceh Tengah",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213815",
+    "nama": "Sekolah Tinggi Ilmu Tarbiyah Daarurrahmah Sepadan Aceh",
+    "nama_singkat": "STIT DARAS"
+  },
+  {
+    "kode_pt": "213613",
+    "nama": "Sekolah Tinggi Ilmu Tarbiyah Darussalamah Pidie Banda Aceh",
+    "nama_singkat": "STIT DARSA"
+  },
+  {
+    "kode_pt": "213560",
+    "nama": "Sekolah Tinggi Ilmu Tarbiyah Simeulue Aceh",
+    "nama_singkat": "STIT SIMEULUE ACEH"
+  },
+  {
+    "kode_pt": "213614",
+    "nama": "Sekolah Tinggi Ilmu Tarbiyah Syamsuddhuha Aceh Utara Banda Aceh",
+    "nama_singkat": "STIT SYAMSUDDHUHA"
+  },
+  {
+    "kode_pt": "133055",
+    "nama": "Sekolah Tinggi Keguruan dan Ilmu Pendidikan An-nur Nanggroe Aceh Darussalam",
+    "nama_singkat": "STKIP AN-NUR NAD"
+  },
+  {
+    "kode_pt": "133010",
+    "nama": "Sekolah Tinggi Teknik Bina Cendikia",
+    "nama_singkat": "STT-BCI BANDA ACEH"
+  },
+  {
+    "kode_pt": "133007",
+    "nama": "Sekolah Tinggi Teknik Iskandar Thani",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "233348",
+    "nama": "SEKOLAH TINGGI TEOLOGI PANTEKOSTA SUMUT - ACEH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213278",
+    "nama": "STAI Al-Washliyah Banda Aceh",
+    "nama_singkat": "STAI AL WASHLIYAH BA"
+  },
+  {
+    "kode_pt": "213277",
+    "nama": "STAI ALMUSLIM BIREUN",
+    "nama_singkat": "INSTITUT AGAMA ISLAM"
+  },
+  {
+    "kode_pt": "213279",
+    "nama": "STAI AR-RAHMAN ACEH SELATAN",
+    "nama_singkat": "STAI AR-RAHMAN"
+  },
+  {
+    "kode_pt": "213003",
+    "nama": "STAI Darul Hikmah Aceh Barat",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213287",
+    "nama": "STAI Jamiatut Tarbiyah Lhoksukon Aceh Utara",
+    "nama_singkat": "STAI-JAMITAR"
+  },
+  {
+    "kode_pt": "213280",
+    "nama": "STAI Nusantara Kota Banda Aceh",
+    "nama_singkat": "STAI NUSANTARA"
+  },
+  {
+    "kode_pt": "213282",
+    "nama": "STAI Sepakat Segenep Kutacane Aceh Tenggara",
+    "nama_singkat": "STAISES"
+  },
+  {
+    "kode_pt": "213283",
+    "nama": "STAI Syekh Abdur Rauf Singkil",
+    "nama_singkat": "STAISAR"
+  },
+  {
+    "kode_pt": "213004",
+    "nama": "STAI Tapaktuan Aceh Selatan",
+    "nama_singkat": "STAI TAPAKTUAN"
+  },
+  {
+    "kode_pt": "213284",
+    "nama": "STAI TEUNGKU DIRUNDENG MEULABOH ACEH BARAT",
+    "nama_singkat": "STAI TDM"
+  },
+  {
+    "kode_pt": "213285",
+    "nama": "STAI Tgk. Chik Pante Kulu Kota Banda Aceh",
+    "nama_singkat": "STAI YTCPK"
+  },
+  {
+    "kode_pt": "203033",
+    "nama": "STAIN GAJAH PUTIH TAKENGON ACEH TENGAH",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "203018",
+    "nama": "STAIN Malikussaleh",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "203034",
+    "nama": "STAIN Teungku Dirundeng Meulaboh",
+    "nama_singkat": "STAIN MEULABOH"
+  },
+  {
+    "kode_pt": "203020",
+    "nama": "STAIN Zawiyah Cot Kala Langsa",
+    "nama_singkat": "STAIN ZAWIYAH COT KA"
+  },
+  {
+    "kode_pt": "213509",
+    "nama": "STI Ekonomi Syari`ah Baktiya Aceh Utara",
+    "nama_singkat": "STIES"
+  },
+  {
+    "kode_pt": "133025",
+    "nama": "STIE BUMI PERSADA LHOKSEUMAWE",
+    "nama_singkat": "STIE BUMI PERSADA"
+  },
+  {
+    "kode_pt": "133051",
+    "nama": "STIKES Assyifa Aceh",
+    "nama_singkat": "STIKES ASSYIFA ACEH"
+  },
+  {
+    "kode_pt": "133038",
+    "nama": "STIKES BINA BANGSA KUALA SIMPANG",
+    "nama_singkat": "STIKES BINUSA"
+  },
+  {
+    "kode_pt": "133035",
+    "nama": "STIKES BUMI PERSADA LHOKSEUMAWE",
+    "nama_singkat": "STIKES BUMI PERSADA"
+  },
+  {
+    "kode_pt": "133046",
+    "nama": "STIKES Bustanul Ulum Langsa",
+    "nama_singkat": "STIKES BUL"
+  },
+  {
+    "kode_pt": "133026",
+    "nama": "STIKES CUT NYAK DHIEN LANGSA",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133030",
+    "nama": "STIKES Darussalam Lhokseumawe",
+    "nama_singkat": "SDL"
+  },
+  {
+    "kode_pt": "133033",
+    "nama": "STIKES Medika Nurul Islam",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133032",
+    "nama": "STIKES Medika Seramoe Barat",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133045",
+    "nama": "STIKES MEDIKA TEUKU UMAR",
+    "nama_singkat": "STIKES MTU"
+  },
+  {
+    "kode_pt": "133031",
+    "nama": "STIKES Muhammadiyah Lhokseumawe",
+    "nama_singkat": "STIKESMU LHOKSEUMAWE"
+  },
+  {
+    "kode_pt": "133041",
+    "nama": "STIKES NURUL HASANAH KUTACANE",
+    "nama_singkat": "STIKES YNH"
+  },
+  {
+    "kode_pt": "133022",
+    "nama": "STIKES Payung Negeri Aceh Darussalam",
+    "nama_singkat": "STIKES PNAD"
+  },
+  {
+    "kode_pt": "213286",
+    "nama": "STIS Al-Hilal Sigli Kab. Pidie",
+    "nama_singkat": "STIS AL-HILAL SIGLI"
+  },
+  {
+    "kode_pt": "133024",
+    "nama": "STISIP AL WASHLIYAH BANDA ACEH",
+    "nama_singkat": "STISIP AL WASHLIYAH"
+  },
+  {
+    "kode_pt": "213513",
+    "nama": "STIT Babussalam, Aceh Tenggara",
+    "nama_singkat": "STITBA"
+  },
+  {
+    "kode_pt": "213445",
+    "nama": "STIT Bustanul Arifin",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "213550",
+    "nama": "STIT Darussalam Lhokseumawe",
+    "nama_singkat": "STIT DARUSSALAM"
+  },
+  {
+    "kode_pt": "213574",
+    "nama": "STIT Hamzah Fansuri Subulussalam Aceh",
+    "nama_singkat": "STIT HAMZAH FANSURI"
+  },
+  {
+    "kode_pt": "213005",
+    "nama": "STIT Muhammadiyah Aceh Barat Daya",
+    "nama_singkat": "STIT MU ABDYA"
+  },
+  {
+    "kode_pt": "213288",
+    "nama": "STIT PTI Al-Hilal Sigli Kab. Pidie",
+    "nama_singkat": "STIT AL- HILAL SIGLI"
+  },
+  {
+    "kode_pt": "213451",
+    "nama": "STIT Syekhsaman Al-Hasan",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133017",
+    "nama": "STKIP AN-NUR NANGRO ACEH",
+    "nama_singkat": "STKIP AN-NUR"
+  },
+  {
+    "kode_pt": "133018",
+    "nama": "STKIP BINA BANGSA GETSEMPENA",
+    "nama_singkat": "STKIP BBG"
+  },
+  {
+    "kode_pt": "133042",
+    "nama": "STKIP BINA BANGSA MEULABOH",
+    "nama_singkat": "STKIP BBM"
+  },
+  {
+    "kode_pt": "133044",
+    "nama": "STKIP BUMI PERSADA LHOKSEUMAWE",
+    "nama_singkat": "STKIP BUMI PERSADA"
+  },
+  {
+    "kode_pt": "133048",
+    "nama": "STKIP CITRA BANGSA ACEH UTARA",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133040",
+    "nama": "STKIP Muhammadiyah Aceh Barat Daya",
+    "nama_singkat": "STKIPMU"
+  },
+  {
+    "kode_pt": "133020",
+    "nama": "STKIP MUHAMMADIYAH ACEH TENGAH",
+    "nama_singkat": "STKIP MAT"
+  },
+  {
+    "kode_pt": "133043",
+    "nama": "STKIP Usman Safri Kutacane",
+    "nama_singkat": "STKIP-US KUTACANE"
+  },
+  {
+    "kode_pt": "133004",
+    "nama": "STMIK ABULYATAMA",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133012",
+    "nama": "STMIK BINA BANGSA",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "133047",
+    "nama": "STMIK Indonesia Banda Aceh",
+    "nama_singkat": "SIBA"
+  },
+  {
+    "kode_pt": "133028",
+    "nama": "STMIK U BUDIYAH INDONESIA",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "131003",
+    "nama": "Universitas Abulyatama",
+    "nama_singkat": "UNAYA"
+  },
+  {
+    "kode_pt": "131019",
+    "nama": "Universitas Ahmad Dahlan Aceh",
+    "nama_singkat": "UAD ACEH"
+  },
+  {
+    "kode_pt": "131017",
+    "nama": "Universitas Al Washliyah Darussalam Banda Aceh",
+    "nama_singkat": "UNADA"
+  },
+  {
+    "kode_pt": "131006",
+    "nama": "Universitas Almuslim",
+    "nama_singkat": "UMUSLIM"
+  },
+  {
+    "kode_pt": "131013",
+    "nama": "Universitas Bina Bangsa Getsempena",
+    "nama_singkat": "UBBG"
+  },
+  {
+    "kode_pt": "131016",
+    "nama": "Universitas Bumi Persada",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "131018",
+    "nama": "Universitas Cipta Mandiri",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "131008",
+    "nama": "Universitas Gajah Putih",
+    "nama_singkat": "UGP"
+  },
+  {
+    "kode_pt": "131009",
+    "nama": "Universitas Gunung Leuser",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "131002",
+    "nama": "Universitas Iskandar Muda",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "211031",
+    "nama": "Universitas Islam Aceh",
+    "nama_singkat": "UIA"
+  },
+  {
+    "kode_pt": "211020",
+    "nama": "Universitas Islam Al-Aziziyah Indonesia",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "131012",
+    "nama": "Universitas Islam Kebangsaan Indonesia",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "201011",
+    "nama": "Universitas Islam Negeri Ar-Raniry Banda Aceh",
+    "nama_singkat": "UINAR"
+  },
+  {
+    "kode_pt": "201037",
+    "nama": "Universitas Islam Negeri Sultanah Nahrasiyah Lhokseumawe",
+    "nama_singkat": "UINSUNA"
+  },
+  {
+    "kode_pt": "131001",
+    "nama": "Universitas Jabal Ghafur",
+    "nama_singkat": "UNIGHA"
+  },
+  {
+    "kode_pt": "001046",
+    "nama": "Universitas Malikussaleh",
+    "nama_singkat": "UNIMAL"
+  },
+  {
+    "kode_pt": "131004",
+    "nama": "Universitas Muhammadiyah Aceh",
+    "nama_singkat": "UNMUHA"
+  },
+  {
+    "kode_pt": "131014",
+    "nama": "Universitas Muhammadiyah Mahakarya Aceh",
+    "nama_singkat": "UMMAH"
+  },
+  {
+    "kode_pt": "131015",
+    "nama": "Universitas Nurul Hasanah Kutacane",
+    "nama_singkat": "UNH"
+  },
+  {
+    "kode_pt": "131011",
+    "nama": "Universitas Sains Cut Nyak Dhien",
+    "nama_singkat": null
+  },
+  {
+    "kode_pt": "001053",
+    "nama": "Universitas Samudra",
+    "nama_singkat": "UNSAM"
+  },
+  {
+    "kode_pt": "011019",
+    "nama": "UNIVERSITAS SAMUDRA LANGSA",
+    "nama_singkat": "UNSAM"
+  },
+  {
+    "kode_pt": "131005",
+    "nama": "Universitas Serambi Mekkah",
+    "nama_singkat": "UNIV. SERAMBI MEKKAH"
+  },
+  {
+    "kode_pt": "001011",
+    "nama": "Universitas Syiah Kuala",
+    "nama_singkat": "USK"
+  },
+  {
+    "kode_pt": "001058",
+    "nama": "Universitas Teuku Umar",
+    "nama_singkat": "UTU"
+  },
+  {
+    "kode_pt": "131007",
+    "nama": "UNIVERSITAS TEUKU UMAR MEULABOH",
+    "nama_singkat": "UTU"
+  },
+  {
+    "kode_pt": "131010",
+    "nama": "Universitas U'budiyah Indonesia",
+    "nama_singkat": "UBUDIYAH"
+  }
+]
