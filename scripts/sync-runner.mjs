@@ -1,18 +1,30 @@
 /**
- * Manual Server-side Sync Runner for Direktori Mahasiswa Aceh.
- *
+ * Master Server-side Sync Runner for Direktori Mahasiswa Aceh.
+ * 
  * Penggunaan:
+ *   # 1. Tampilkan estimasi cakupan dan jumlah request sebelum menjalankan (Aman, tanpa request masif)
+ *   node scripts/sync-runner.mjs --all-aceh
+ * 
+ *   # 2. Eksekusi sinkronisasi seluruh kampus Aceh (dengan checkpointing & rate-limiting otomatis)
+ *   node scripts/sync-runner.mjs --all-aceh --execute
+ * 
+ *   # 3. Eksekusi bertahap (contoh: 5 kampus pertama)
+ *   node scripts/sync-runner.mjs --all-aceh --execute --campus-limit=5
+ * 
+ *   # 4. Sinkronisasi satu kampus spesifik (seluruh prodi)
+ *   node scripts/sync-runner.mjs --campus="Politeknik Negeri Lhokseumawe" --all-prodi
+ * 
+ *   # 5. Sinkronisasi direktori 183 PT Aceh dari endpoint lokasi resmi PDDikti
  *   node scripts/sync-runner.mjs --sync-campuses
- *   node scripts/sync-runner.mjs --campus="Politeknik Negeri Lhokseumawe" --all-prodi [--prodi-limit=5] [--max-per-prodi=100]
- *   node scripts/sync-runner.mjs --campus="Politeknik Negeri Lhokseumawe" --mhs="Politeknik Negeri Lhokseumawe" --max=10
- *
+ * 
  * Fitur:
- * - Sinkronisasi direktori PT Aceh terverifikasi dari /api/pt/locations PDDikti
- * - Strategi multi-prodi terpartisi untuk menembus batas hard-cap 100 PDDikti secara terukur
+ * - Mengambil daftar kampus secara dinamis dari tabel `institutions` Supabase (tanpa hardcode)
+ * - Menelusuri prodi via `/api/pencarian/prodi/{pt}` dan mahasiswa via `/api/pencarian/mhs/{prodi} {pt}`
+ * - Checkpoint terperinci per kampus dan per prodi (.sync-aceh-checkpoint.json)
+ * - Penanganan batas hard-cap 100 PDDikti (mencatat prodi capped & lanjut tanpa terhenti)
  * - Guard Kontaminasi Antar-Kampus ketat (tidak memasukkan mahasiswa kampus lain)
- * - Checkpoint, Retry eksponensial (max 3), Rate Limiting, Deduplikasi (kode_pt, nim)
  * - Batch Upsert ke Supabase PostgreSQL (?on_conflict=kode_pt,nim)
- * - Pencatatan komprehensif ke tabel sync_runs
+ * - Rate limiting dan Retry eksponensial (max 3)
  * - Tidak mengekspos PII atau secret ke log konsol
  */
 
@@ -48,38 +60,57 @@ if (!SUPABASE_URL || !SERVICE_KEY || SUPABASE_URL.includes('your-project-id') ||
 }
 
 const args = process.argv.slice(2);
+let allAcehFlag = false;
+let executeFlag = false;
 let campusArg = null;
 let mhsArg = null;
 let maxArg = 10;
 let syncCampusesFlag = false;
 let allProdiFlag = false;
-let prodiLimitArg = 0; // 0 = no limit (all prodis)
+let campusLimitArg = 0;
+let prodiLimitArg = 0;
 let maxPerProdiArg = 100;
-let fetchDetailsFlag = false;
-let checkpointFileArg = path.resolve(__dirname, '../.sync-prodi-checkpoint.json');
+let delayMsArg = 600;
+let resetCheckpointFlag = false;
+let checkpointFileArg = path.resolve(__dirname, '../.sync-aceh-checkpoint.json');
 
 for (const arg of args) {
+  if (arg === '--all-aceh' || arg === '--all') allAcehFlag = true;
+  if (arg === '--execute' || arg === '-y') executeFlag = true;
   if (arg.startsWith('--campus=')) campusArg = arg.split('=')[1].replace(/^['"]|['"]$/g, '');
   if (arg.startsWith('--mhs=')) mhsArg = arg.split('=')[1].replace(/^['"]|['"]$/g, '');
   if (arg.startsWith('--max=')) maxArg = parseInt(arg.split('=')[1], 10) || 10;
   if (arg === '--all-prodi' || arg === '--prodi') allProdiFlag = true;
+  if (arg.startsWith('--campus-limit=')) campusLimitArg = parseInt(arg.split('=')[1], 10) || 0;
   if (arg.startsWith('--prodi-limit=')) prodiLimitArg = parseInt(arg.split('=')[1], 10) || 0;
   if (arg.startsWith('--max-per-prodi=')) maxPerProdiArg = parseInt(arg.split('=')[1], 10) || 100;
-  if (arg === '--fetch-details') fetchDetailsFlag = true;
+  if (arg.startsWith('--delay=')) delayMsArg = parseInt(arg.split('=')[1], 10) || 600;
+  if (arg === '--reset-checkpoint') resetCheckpointFlag = true;
   if (arg.startsWith('--checkpoint=')) checkpointFileArg = path.resolve(arg.split('=')[1].replace(/^['"]|['"]$/g, ''));
   if (arg === '--sync-campuses' || arg === '--pt-list') syncCampusesFlag = true;
 }
 
-if (!campusArg && !mhsArg && !syncCampusesFlag) {
-  console.log('\n--- SINKRONISASI SERVER-SIDE DIREKTORI MAHASISWA ACEH ---');
-  console.log('Argumen yang didukung:');
-  console.log('  --sync-campuses                                     (Sinkronisasi seluruh PT Aceh dari /api/pt/locations)');
-  console.log('  --campus="Nama Kampus" --all-prodi [--prodi-limit=N] (Sinkronisasi per program studi untuk menembus cap 100)');
-  console.log('  --campus="Nama Kampus" --mhs="Keyword" [--max=N]     (Sinkronisasi data Mahasiswa bertarget)');
-  console.log('  --fetch-details                                     (Mengambil detail tanggal/status lengkap)');
-  console.log('\nContoh:');
-  console.log('  node scripts/sync-runner.mjs --sync-campuses');
-  console.log('  node scripts/sync-runner.mjs --campus="Politeknik Negeri Lhokseumawe" --all-prodi --prodi-limit=5\n');
+if (!allAcehFlag && !campusArg && !mhsArg && !syncCampusesFlag) {
+  console.log('\n========================================================================');
+  console.log('SINKRONISASI SERVER-SIDE DIREKTORI MAHASISWA ACEH');
+  console.log('========================================================================');
+  console.log('Perintah yang tersedia:');
+  console.log('  1. Estimasi Cakupan Seluruh Aceh:');
+  console.log('     node scripts/sync-runner.mjs --all-aceh');
+  console.log('');
+  console.log('  2. Eksekusi Sinkronisasi Seluruh Aceh (Otomatis Checkpointing):');
+  console.log('     node scripts/sync-runner.mjs --all-aceh --execute');
+  console.log('     node scripts/sync-runner.mjs --all-aceh --execute --campus-limit=5');
+  console.log('');
+  console.log('  3. Sinkronisasi Satu Kampus Spesifik (Multi-Prodi):');
+  console.log('     node scripts/sync-runner.mjs --campus="Politeknik Negeri Lhokseumawe" --all-prodi');
+  console.log('');
+  console.log('  4. Sinkronisasi Mahasiswa Bertarget Kata Kunci:');
+  console.log('     node scripts/sync-runner.mjs --campus="Nama Kampus" --mhs="Nama/NIM"');
+  console.log('');
+  console.log('  5. Sinkronisasi Direktori 183 Kampus Aceh:');
+  console.log('     node scripts/sync-runner.mjs --sync-campuses');
+  console.log('========================================================================\n');
   process.exit(0);
 }
 
@@ -142,6 +173,11 @@ async function supabaseRequest(pathEndpoint, options = {}) {
   return null;
 }
 
+function cleanString(str) {
+  if (!str) return '';
+  return str.trim();
+}
+
 function cleanStatus(status) {
   if (!status) return 'Aktif';
   let s = status.trim();
@@ -157,31 +193,427 @@ function inferTahunMasuk(nim, rawTanggalMasuk) {
   }
   if (!nim) return null;
   const cleanNim = nim.trim();
-
-  // Format 4 digit: 2022xxx, 2023xxx, 2019xxx, 1999xxx
+  
   if (/^(19\d{2}|20\d{2})/.test(cleanNim)) {
     const y = parseInt(cleanNim.slice(0, 4), 10);
     if (y >= 1980 && y <= 2030) return y;
   }
-
-  // Format 2 digit: 14xxx -> 2014, 09xxx -> 2009, 21xxx -> 2021
+  
   if (/^\d{2}/.test(cleanNim)) {
     const prefix = parseInt(cleanNim.slice(0, 2), 10);
     if (prefix >= 80 && prefix <= 99) return 1900 + prefix;
     if (prefix >= 0 && prefix <= 30) return 2000 + prefix;
   }
-
+  
   return null;
+}
+
+function normalizeCampusName(name) {
+  if (!name) return '';
+  return name
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^A-Z0-9 ]/g, '')
+    .trim();
+}
+
+// Load Checkpoint
+function loadCheckpoint(filePath) {
+  if (resetCheckpointFlag && fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+      console.log('File checkpoint di-reset sesuai permintaan (--reset-checkpoint).');
+    } catch {
+      // ignore
+    }
+  }
+
+  if (fs.existsSync(filePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return {
+        completed_campuses: Array.isArray(data.completed_campuses) ? data.completed_campuses : [],
+        completed_prodis_by_campus: data.completed_prodis_by_campus || {},
+        capped_prodis_by_campus: data.capped_prodis_by_campus || {},
+        stats: data.stats || {
+          campuses_processed: 0,
+          prodis_processed: 0,
+          total_discovered: 0,
+          total_inserted: 0,
+          total_updated: 0,
+          total_skipped_guard: 0,
+          total_capped_prodis: 0,
+          total_errors: 0,
+        },
+      };
+    } catch (e) {
+      console.warn('Gagal membaca file checkpoint:', e.message);
+    }
+  }
+
+  return {
+    completed_campuses: [],
+    completed_prodis_by_campus: {},
+    capped_prodis_by_campus: {},
+    stats: {
+      campuses_processed: 0,
+      prodis_processed: 0,
+      total_discovered: 0,
+      total_inserted: 0,
+      total_updated: 0,
+      total_skipped_guard: 0,
+      total_capped_prodis: 0,
+      total_errors: 0,
+    },
+  };
+}
+
+function saveCheckpoint(filePath, checkpoint) {
+  try {
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify(
+        {
+          updated_at: new Date().toISOString(),
+          ...checkpoint,
+        },
+        null,
+        2
+      )
+    );
+  } catch (err) {
+    console.warn('Gagal menyimpan checkpoint:', err.message);
+  }
 }
 
 async function run() {
   console.log('========================================================');
   console.log('SINKRONISASI SERVER-SIDE DIREKTORI MAHASISWA ACEH');
   console.log('Target Database:', SUPABASE_URL);
-  console.log('Waktu mulai:', new Date().toISOString());
+  console.log('Waktu mulai    :', new Date().toISOString());
   console.log('========================================================');
 
-  // 1. SINKRONISASI DIREKTORI KAMPUS DARI /api/pt/locations
+  // ====================================================================
+  // 1. SINKRONISASI SELURUH KAMPUS ACEH (ALL-ACEH MULTI-CAMPUS SYNC)
+  // ====================================================================
+  if (allAcehFlag) {
+    console.log('\n--- SINKRONISASI MULTI-KAMPUS SELURUH PROVINSI ACEH ---');
+
+    // 1.1 Ambil daftar seluruh kampus dari tabel institutions di Supabase
+    console.log('Mengambil daftar kampus Aceh dari tabel institutions di Supabase...');
+    const allInstitutions = await supabaseRequest('institutions?select=kode_pt,nama,nama_singkat,metadata&order=nama.asc');
+
+    if (!allInstitutions || allInstitutions.length === 0) {
+      console.error('Tidak ada data kampus di database. Jalankan --sync-campuses terlebih dahulu.');
+      return;
+    }
+
+    const totalCampuses = allInstitutions.length;
+    console.log(`Ditemukan ${totalCampuses} perguruan tinggi terdaftar di Supabase.`);
+
+    const checkpoint = loadCheckpoint(checkpointFileArg);
+    const completedSet = new Set(checkpoint.completed_campuses);
+    const remainingCampuses = allInstitutions.filter((c) => !completedSet.has(c.kode_pt.trim()));
+
+    // 1.2 MODE ESTIMASI (Jika tidak menyertakan --execute)
+    if (!executeFlag) {
+      console.log('\n========================================================');
+      console.log('ESTIMASI CAKUPAN & INFORMASI PELAKSANAAN');
+      console.log('========================================================');
+      console.log(`Total Perguruan Tinggi di Database : ${totalCampuses} kampus`);
+      console.log(`Kampus Sudah Selesai (Checkpoint)  : ${completedSet.size} kampus`);
+      console.log(`Kampus Belum Selesai               : ${remainingCampuses.length} kampus`);
+      
+      const avgProdiPerCampus = 10;
+      const estimatedTotalProdi = remainingCampuses.length * avgProdiPerCampus;
+      const estimatedRequests = remainingCampuses.length + estimatedTotalProdi;
+      const estimatedMinutes = Math.ceil((estimatedRequests * delayMsArg) / 60000);
+
+      console.log(`Estimasi Rata-rata Prodi per Kampus: ~${avgProdiPerCampus} prodi`);
+      console.log(`Estimasi Total Request HTTP        : ~${estimatedRequests} request`);
+      console.log(`Jeda Permintaan (Rate-limit)       : ${delayMsArg} ms`);
+      console.log(`Estimasi Durasi Sinkronisasi Penuh : ~${estimatedMinutes} menit (tergantung respons PDDikti)`);
+      console.log(`File Checkpoint                    : ${checkpointFileArg}`);
+      console.log('\nCARA MENJALANKAN:');
+      console.log('  Eksekusi penuh seluruh kampus:');
+      console.log('    node scripts/sync-runner.mjs --all-aceh --execute');
+      console.log('');
+      console.log('  Eksekusi bertahap (contoh: 3 kampus per sesi):');
+      console.log('    node scripts/sync-runner.mjs --all-aceh --execute --campus-limit=3');
+      console.log('');
+      console.log('  Resiliensi: Jika proses terhenti (Ctrl+C atau batas waktu), jalankan kembali');
+      console.log('  perintah di atas dan proses akan otomatis melanjutkan dari checkpoint terakhir');
+      console.log('  tanpa mengulang kampus yang sudah selesai.');
+      console.log('========================================================\n');
+      return;
+    }
+
+    // 1.3 EKSEKUSI PENUH SINKRONISASI
+    const targetCampuses = campusLimitArg > 0 ? remainingCampuses.slice(0, campusLimitArg) : remainingCampuses;
+
+    console.log(`\nMemulai sinkronisasi untuk ${targetCampuses.length} kampus pada sesi ini...`);
+    console.log(`(Jeda per request: ${delayMsArg}ms, Hard-cap 100 ditangani dengan penandaan)\n`);
+
+    // Catat log permulaan run di sync_runs
+    let runId = null;
+    try {
+      const createdRun = await supabaseRequest('sync_runs', {
+        method: 'POST',
+        body: JSON.stringify([{
+          status: 'running',
+          target_type: 'mhs_all_aceh_sync',
+          target_keyword: `Seluruh Aceh (${targetCampuses.length} PT / Sesi Ini)`,
+          processed_count: checkpoint.stats.total_discovered,
+          inserted_count: checkpoint.stats.total_inserted,
+          updated_count: checkpoint.stats.total_updated,
+        }]),
+      });
+      if (createdRun && createdRun[0]) runId = createdRun[0].id;
+    } catch {
+      // ignore run log creation error
+    }
+
+    for (let cIdx = 0; cIdx < targetCampuses.length; cIdx++) {
+      const pt = targetCampuses[cIdx];
+      const kodePt = pt.kode_pt.trim();
+      const namaPt = pt.nama.trim();
+
+      console.log(`\n--------------------------------------------------------`);
+      console.log(`[KAMPUS ${cIdx + 1}/${targetCampuses.length}] [${kodePt}] ${namaPt}`);
+      console.log(`--------------------------------------------------------`);
+
+      // 1. Dapatkan nama dan identitas resmi PDDikti dari kode_pt
+      let pddiktiPtName = namaPt;
+      let pddiktiPtSingkat = pt.nama_singkat || '';
+      try {
+        const ptLookupRes = await fetchWithRetry(`${BASE_URL}/api/pencarian/pt/${encodeURIComponent(kodePt)}`, { headers: HEADERS });
+        if (ptLookupRes.ok) {
+          const ptLookupJson = await ptLookupRes.json();
+          const exactPt = (ptLookupJson.data || []).find((p) => (p.kode || '').trim() === kodePt);
+          if (exactPt && exactPt.nama) {
+            pddiktiPtName = exactPt.nama.trim();
+            if (exactPt.nama_singkat) pddiktiPtSingkat = exactPt.nama_singkat.trim();
+          }
+        }
+      } catch {
+        // Fallback ke namaPt dari database
+      }
+
+      const normTargetName = normalizeCampusName(pddiktiPtName);
+      const normDbName = normalizeCampusName(namaPt);
+      const normTargetSingkat = normalizeCampusName(pddiktiPtSingkat);
+
+      // 2. Ambil prodi dari PDDikti
+      await sleep(delayMsArg);
+      let rawProdis = [];
+      try {
+        const prodiRes = await fetchWithRetry(`${BASE_URL}/api/pencarian/prodi/${encodeURIComponent(pddiktiPtName)}`, { headers: HEADERS });
+        if (prodiRes.ok) {
+          const prodiJson = await prodiRes.json();
+          rawProdis = prodiJson.data || [];
+        }
+      } catch (err) {
+        console.error(`  Gagal mengambil prodi: ${err.message}`);
+        checkpoint.stats.total_errors++;
+        continue;
+      }
+
+      // Filter prodi yang BENAR-BENAR milik kampus ini (cocokan nama ter-normalisasi, bukan substring liar)
+      const campusProdis = rawProdis.filter((p) => {
+        const normPt = normalizeCampusName(p.pt);
+        const normPtSingkat = normalizeCampusName(p.pt_singkat);
+        return normPt === normTargetName || (normDbName && normPt === normDbName) || (normTargetSingkat && normPtSingkat === normTargetSingkat);
+      });
+
+      console.log(`  Ditemukan ${campusProdis.length} program studi resmi terverifikasi di PDDikti.`);
+
+      if (campusProdis.length === 0) {
+        console.log(`  Tidak ada program studi yang ditemukan. Menandai kampus selesai.`);
+        if (!checkpoint.completed_campuses.includes(kodePt)) {
+          checkpoint.completed_campuses.push(kodePt);
+        }
+        saveCheckpoint(checkpointFileArg, checkpoint);
+        continue;
+      }
+
+      // Ambil daftar prodi yang sudah selesai untuk kampus ini
+      if (!checkpoint.completed_prodis_by_campus[kodePt]) {
+        checkpoint.completed_prodis_by_campus[kodePt] = [];
+      }
+      if (!checkpoint.capped_prodis_by_campus[kodePt]) {
+        checkpoint.capped_prodis_by_campus[kodePt] = [];
+      }
+
+      const completedProdiSet = new Set(checkpoint.completed_prodis_by_campus[kodePt]);
+      const prodisToProcess = prodiLimitArg > 0
+        ? campusProdis.filter((p) => !completedProdiSet.has(p.nama.trim())).slice(0, prodiLimitArg)
+        : campusProdis.filter((p) => !completedProdiSet.has(p.nama.trim()));
+
+      console.log(`  Prodi yang diproses pada sesi ini: ${prodisToProcess.length} prodi.`);
+
+      let campusInsertedCount = 0;
+      let campusHadError = false;
+
+      for (let pIdx = 0; pIdx < prodisToProcess.length; pIdx++) {
+        const prodi = prodisToProcess[pIdx];
+        const prodiNama = cleanString(prodi.nama);
+        const prodiJenjang = cleanString(prodi.jenjang) || null;
+
+        await sleep(delayMsArg);
+
+        let rawList = [];
+        try {
+          const mhsRes = await fetchWithRetry(`${BASE_URL}/api/pencarian/mhs/${encodeURIComponent(prodiNama + ' ' + pddiktiPtName)}`, { headers: HEADERS });
+          if (mhsRes.ok) {
+            const mhsJson = await mhsRes.json();
+            rawList = mhsJson.data || [];
+          }
+        } catch (err) {
+          console.warn(`    Gagal mencari mahasiswa prodi ${prodiNama}: ${err.message}`);
+          checkpoint.stats.total_errors++;
+          campusHadError = true;
+          continue;
+        }
+
+        const isCapped = rawList.length >= 100;
+        checkpoint.stats.total_discovered += rawList.length;
+
+        if (isCapped) {
+          console.log(`    [PRODI ${pIdx + 1}/${prodisToProcess.length}] ${prodiJenjang} ${prodiNama}: ${rawList.length} mahasiswa diterima.`);
+          console.log(`      -> [PERHATIAN] Hasil mencapai batas 100 PDDikti (berpotensi belum lengkap). Dicatat & lanjut.`);
+          if (!checkpoint.capped_prodis_by_campus[kodePt].includes(prodiNama)) {
+            checkpoint.capped_prodis_by_campus[kodePt].push(prodiNama);
+          }
+          checkpoint.stats.total_capped_prodis++;
+        } else {
+          console.log(`    [PRODI ${pIdx + 1}/${prodisToProcess.length}] ${prodiJenjang} ${prodiNama}: ${rawList.length} mahasiswa diterima.`);
+        }
+
+        const validStudentsToUpsert = [];
+        const seenInBatch = new Set();
+
+        for (let i = 0; i < Math.min(rawList.length, maxPerProdiArg); i++) {
+          const item = rawList[i];
+          const nim = cleanString(item.nim);
+          const nama = cleanString(item.nama);
+          const studentPt = cleanString(item.nama_pt);
+
+          if (!nim || !nama) continue;
+
+          // GUARD KONTAMINASI ANTAR-KAMPUS KETAT:
+          const normStudentPt = normalizeCampusName(studentPt);
+          const normStudentPtSingkat = normalizeCampusName(item.sinkatan_pt);
+          const isMatchedCampus = normStudentPt === normTargetName || 
+            (normDbName && normStudentPt === normDbName) || 
+            (normTargetSingkat && normStudentPtSingkat === normTargetSingkat);
+
+          if (!isMatchedCampus) {
+            checkpoint.stats.total_skipped_guard++;
+            continue;
+          }
+
+          // DEDUPLIKASI INTRA-BATCH:
+          // Menghindari error PostgreSQL 21000 ("ON CONFLICT DO UPDATE command cannot affect row a second time")
+          const dedupeKey = `${kodePt}:${nim}`;
+          if (seenInBatch.has(dedupeKey)) continue;
+          seenInBatch.add(dedupeKey);
+
+          const tahunMasuk = inferTahunMasuk(nim, null);
+
+          validStudentsToUpsert.push({
+            kode_pt: kodePt,
+            nama_pt: namaPt,
+            nim,
+            nama,
+            kode_prodi: null,
+            prodi: cleanString(item.nama_prodi) || prodiNama,
+            jenjang: prodiJenjang,
+            status: 'Aktif',
+            tanggal_masuk: null,
+            tahun_masuk: tahunMasuk,
+            jenis_kelamin: null,
+            raw_detail: {},
+            synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        // Batch Upsert ke Supabase
+        if (validStudentsToUpsert.length > 0) {
+          try {
+            await supabaseRequest('students?on_conflict=kode_pt,nim', {
+              method: 'POST',
+              headers: { 'Prefer': 'resolution=merge-duplicates' },
+              body: JSON.stringify(validStudentsToUpsert),
+            });
+            campusInsertedCount += validStudentsToUpsert.length;
+            checkpoint.stats.total_inserted += validStudentsToUpsert.length;
+            console.log(`      -> Berhasil menyimpan/memperbarui ${validStudentsToUpsert.length} mahasiswa.`);
+
+            if (!checkpoint.completed_prodis_by_campus[kodePt].includes(prodiNama)) {
+              checkpoint.completed_prodis_by_campus[kodePt].push(prodiNama);
+            }
+            checkpoint.stats.prodis_processed++;
+            saveCheckpoint(checkpointFileArg, checkpoint);
+          } catch (dbErr) {
+            console.error(`      -> Gagal menyimpan batch prodi ${prodiNama}: ${dbErr.message}`);
+            checkpoint.stats.total_errors++;
+            campusHadError = true;
+          }
+        } else {
+          if (!checkpoint.completed_prodis_by_campus[kodePt].includes(prodiNama)) {
+            checkpoint.completed_prodis_by_campus[kodePt].push(prodiNama);
+          }
+          checkpoint.stats.prodis_processed++;
+          saveCheckpoint(checkpointFileArg, checkpoint);
+        }
+      }
+
+      // Tandai kampus selesai HANYA JIKA seluruh prodi berhasil tanpa error
+      if (!campusHadError) {
+        if (!checkpoint.completed_campuses.includes(kodePt)) {
+          checkpoint.completed_campuses.push(kodePt);
+        }
+        checkpoint.stats.campuses_processed++;
+        saveCheckpoint(checkpointFileArg, checkpoint);
+        console.log(`  [SELESAI] Kampus ${pddiktiPtName} selesai diproses (+${campusInsertedCount} mahasiswa).`);
+      } else {
+        console.warn(`  [TERTUNDA] Kampus ${pddiktiPtName} belum ditandai selesai karena ada prodi yang gagal/terpotong.`);
+      }
+    }
+
+    // Perbarui riwayat di sync_runs
+    if (runId) {
+      await supabaseRequest(`sync_runs?id=eq.${runId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ended_at: new Date().toISOString(),
+          status: 'success',
+          processed_count: Number(checkpoint.stats.total_discovered) || 0,
+          inserted_count: Number(checkpoint.stats.total_inserted) || 0,
+          updated_count: Number(checkpoint.stats.total_updated) || 0,
+        }),
+      });
+    }
+
+    console.log('\n========================================================');
+    console.log('RINGKASAN SINKRONISASI SELURUH ACEH');
+    console.log('========================================================');
+    console.log(`Total Kampus Selesai          : ${checkpoint.completed_campuses.length} / ${totalCampuses}`);
+    console.log(`Total Prodi Diproses          : ${checkpoint.stats.prodis_processed}`);
+    console.log(`Total Data Mahasiswa Diterima : ${checkpoint.stats.total_discovered}`);
+    console.log(`Total Mahasiswa Tersimpan     : ${checkpoint.stats.total_inserted}`);
+    console.log(`Prodi Berpotensi Capped (>100): ${checkpoint.stats.total_capped_prodis}`);
+    console.log(`Dilewati Guard Kontaminasi    : ${checkpoint.stats.total_skipped_guard || 0}`);
+    console.log(`Total Error                   : ${checkpoint.stats.total_errors || 0}`);
+    console.log(`File Checkpoint               : ${checkpointFileArg}`);
+    console.log('========================================================\n');
+    return;
+  }
+
+  // ====================================================================
+  // 2. SINKRONISASI DIREKTORI KAMPUS DARI /api/pt/locations
+  // ====================================================================
   if (syncCampusesFlag) {
     console.log('\n--- SINKRONISASI DIREKTORI PERGURUAN TINGGI RESMI ACEH ---');
     console.log('Mengambil data nasional dari PDDikti /api/pt/locations...');
@@ -202,18 +634,18 @@ async function run() {
       'idi', 'lhoksukon', 'sigli', 'calang', 'sinabang', 'blangkejeren', 'blangpidie', 'karang baru'
     ];
 
-    const acehCampuses = allPts.filter(it => {
+    const acehCampuses = allPts.filter((it) => {
       const kab = (it.kab_kota || '').toLowerCase();
       const nama = (it.nama || '').toLowerCase();
       if (kab.includes('karo')) return false;
-      return acehKabTokens.some(k => kab.includes(k)) || nama.includes('aceh');
+      return acehKabTokens.some((k) => kab.includes(k)) || nama.includes('aceh');
     });
 
     console.log(`Ditemukan ${acehCampuses.length} perguruan tinggi terverifikasi di Provinsi Aceh.`);
 
     const existingInsts = await supabaseRequest('institutions?select=kode_pt,nama,nama_singkat,metadata');
     const existingMap = new Map();
-    (existingInsts || []).forEach(i => existingMap.set(i.kode_pt.trim(), i));
+    (existingInsts || []).forEach((i) => existingMap.set(i.kode_pt.trim(), i));
 
     let newCount = 0;
     let updatedCount = 0;
@@ -264,20 +696,6 @@ async function run() {
       }
     }
 
-    await supabaseRequest('sync_runs', {
-      method: 'POST',
-      body: JSON.stringify([{
-        target_type: 'pt_directory_locations',
-        target_keyword: 'Aceh (23 Kab/Kota Official Locations)',
-        processed_count: acehCampuses.length,
-        inserted_count: newCount,
-        updated_count: updatedCount,
-        status: errCount === 0 ? 'success' : 'partial',
-        error_message: errCount > 0 ? `${errCount} kampus gagal disimpan` : null,
-        ended_at: new Date().toISOString(),
-      }]),
-    });
-
     console.log('\n--- HASIL SINKRONISASI KAMPUS ---');
     console.log(`Total PT Aceh ditemukan dari PDDikti : ${acehCampuses.length}`);
     console.log(`Kampus Baru Ditambahkan              : ${newCount}`);
@@ -286,29 +704,24 @@ async function run() {
     console.log(`Total record PT di database sekarang : ${existingMap.size + newCount}`);
   }
 
-  // 2. SINKRONISASI MAHASISWA MULTI-PRODI (MENEMBUS BATAS 100 RECORD)
+  // ====================================================================
+  // 3. SINKRONISASI MAHASISWA SATU KAMPUS SPESIFIK (MULTI-PRODI)
+  // ====================================================================
   if (campusArg && allProdiFlag) {
-    console.log(`\n--- SINKRONISASI MAHASISWA MULTI-PRODI ---`);
+    console.log(`\n--- SINKRONISASI MAHASISWA MULTI-PRODI (KAMPUS TUNGGAL) ---`);
     console.log(`Target Kampus: "${campusArg}"`);
-    console.log(`Mode: Partisi per Program Studi (Bypass limit 100 search cap PDDikti)`);
 
-    // Dapatkan data institusi resmi dari DB
     const foundInsts = await supabaseRequest(`institutions?nama=ilike.*${encodeURIComponent(campusArg)}*&select=kode_pt,nama,nama_singkat&limit=5`);
-    let targetInst = (foundInsts && foundInsts.length > 0) ? foundInsts[0] : null;
+    let targetInst = foundInsts && foundInsts.length > 0 ? foundInsts[0] : null;
     if (!targetInst) {
-      console.warn(`Kampus "${campusArg}" belum terdaftar di database. Menggunakan kode sementara.`);
-      targetInst = {
-        kode_pt: '005016',
-        nama: campusArg,
-      };
+      console.warn(`Kampus "${campusArg}" belum terdaftar di database. Menggunakan data input.`);
+      targetInst = { kode_pt: '005016', nama: campusArg };
     }
 
     const kodePt = targetInst.kode_pt.trim();
     const namaPt = targetInst.nama.trim();
     console.log(`Kampus Teridentifikasi: [${kodePt}] ${namaPt}`);
 
-    // Ambil daftar prodi dari endpoint resmi /api/pencarian/prodi/{campusArg}
-    console.log(`Mengambil daftar program studi dari PDDikti /api/pencarian/prodi/...`);
     const prodiRes = await fetchWithRetry(`${BASE_URL}/api/pencarian/prodi/${encodeURIComponent(namaPt)}`, { headers: HEADERS });
     if (!prodiRes.ok) {
       console.error(`Gagal mengambil prodi: HTTP ${prodiRes.status}`);
@@ -317,163 +730,87 @@ async function run() {
 
     const prodiJson = await prodiRes.json();
     const rawProdiList = prodiJson.data || [];
-
-    // Filter prodi yang benar-benar milik kampus target
     const targetUpper = namaPt.toUpperCase();
-    const campusProdis = rawProdiList.filter(p => {
+    const campusProdis = rawProdiList.filter((p) => {
       const ptName = (p.pt || '').toUpperCase();
       const ptSingkat = (p.pt_singkat || '').toUpperCase();
       return ptName.includes(targetUpper) || targetUpper.includes(ptName) || (targetInst.nama_singkat && ptSingkat.includes(targetInst.nama_singkat.toUpperCase()));
     });
 
     console.log(`Ditemukan ${campusProdis.length} program studi resmi untuk ${namaPt}.`);
-    if (campusProdis.length === 0) {
-      console.error('Tidak ada prodi yang cocok dengan kampus target.');
-      return;
-    }
 
-    // Baca checkpoint jika ada
-    let completedProdis = new Set();
-    if (fs.existsSync(checkpointFileArg)) {
-      try {
-        const cp = JSON.parse(fs.readFileSync(checkpointFileArg, 'utf8'));
-        if (cp.kode_pt === kodePt && Array.isArray(cp.completed)) {
-          completedProdis = new Set(cp.completed);
-          console.log(`Memuat checkpoint: ${completedProdis.size} prodi sudah pernah disinkronkan sebelumnya.`);
-        }
-      } catch (e) {
-        console.warn('Gagal membaca file checkpoint:', e.message);
-      }
-    }
-
-    const prodisToProcess = prodiLimitArg > 0
-      ? campusProdis.filter(p => !completedProdis.has(p.nama)).slice(0, prodiLimitArg)
-      : campusProdis.filter(p => !completedProdis.has(p.nama));
-
-    console.log(`Prodi yang akan diproses pada sesi ini: ${prodisToProcess.length} prodi.`);
-
+    const prodisToProcess = prodiLimitArg > 0 ? campusProdis.slice(0, prodiLimitArg) : campusProdis;
     let totalDiscovered = 0;
     let totalInserted = 0;
-    let totalUpdated = 0;
-    let totalSkippedGuard = 0;
-    let prodiProcessedCount = 0;
-
-    const sessionStudentsMap = new Map();
+    let totalCapped = 0;
 
     for (let pIdx = 0; pIdx < prodisToProcess.length; pIdx++) {
       const prodi = prodisToProcess[pIdx];
-      const prodiNama = prodi.nama.trim();
-      const prodiJenjang = (prodi.jenjang || '').trim();
+      const prodiNama = cleanString(prodi.nama);
+      const prodiJenjang = cleanString(prodi.jenjang) || null;
       console.log(`\n[PRODI ${pIdx + 1}/${prodisToProcess.length}] ${prodiJenjang} ${prodiNama}...`);
 
-      const searchQuery = `${prodiNama} ${namaPt}`;
-      await sleep(500); // Polite rate limit
+      await sleep(delayMsArg);
 
       let mhsRes;
       try {
-        mhsRes = await fetchWithRetry(`${BASE_URL}/api/pencarian/mhs/${encodeURIComponent(searchQuery)}`, { headers: HEADERS });
+        mhsRes = await fetchWithRetry(`${BASE_URL}/api/pencarian/mhs/${encodeURIComponent(prodiNama + ' ' + namaPt)}`, { headers: HEADERS });
       } catch (err) {
-        console.error(`  Gagal mencari mahasiswa prodi ${prodiNama}: ${err.message}`);
+        console.error(`  Gagal mencari mahasiswa: ${err.message}`);
         continue;
       }
 
-      if (!mhsRes.ok) {
-        console.warn(`  HTTP ${mhsRes.status} saat mencari prodi ${prodiNama}`);
-        continue;
-      }
+      if (!mhsRes.ok) continue;
 
       const mhsJson = await mhsRes.json();
       const rawList = mhsJson.data || [];
-      console.log(`  PDDikti mengembalikan ${rawList.length} mahasiswa.`);
+      totalDiscovered += rawList.length;
+
+      if (rawList.length >= 100) {
+        totalCapped++;
+        console.log(`  PDDikti mengembalikan ${rawList.length} mahasiswa (Mencapai batas 100, berpotensi belum lengkap).`);
+      } else {
+        console.log(`  PDDikti mengembalikan ${rawList.length} mahasiswa.`);
+      }
 
       const validStudentsToUpsert = [];
 
       for (let i = 0; i < Math.min(rawList.length, maxPerProdiArg); i++) {
         const item = rawList[i];
-        totalDiscovered++;
-        const nim = (item.nim || '').trim();
-        const nama = (item.nama || '').trim();
-        const studentPt = (item.nama_pt || '').trim();
-        const studentProdi = (item.nama_prodi || prodiNama).trim();
+        const nim = cleanString(item.nim);
+        const nama = cleanString(item.nama);
+        const studentPt = cleanString(item.nama_pt);
 
         if (!nim || !nama) continue;
 
-        // GUARD KONTAMINASI ANTAR-KAMPUS:
         const studentPtUpper = studentPt.toUpperCase();
         if (!studentPtUpper.includes(targetUpper) && !targetUpper.includes(studentPtUpper)) {
-          totalSkippedGuard++;
           continue;
         }
 
-        // Deduplikasi dalam sesi berjalan
-        const dedupeKey = `${kodePt}:${nim}`;
-        if (sessionStudentsMap.has(dedupeKey)) {
-          continue;
-        }
-        sessionStudentsMap.set(dedupeKey, true);
-
-        let studentKodeProdi = null;
-        let studentJenjang = prodiJenjang || null;
-        let status = 'Aktif';
-        let tanggalMasuk = null;
-        let tahunMasuk = inferTahunMasuk(nim, null);
-        let jenisKelamin = null;
-        let rawDetailObj = {};
-
-        // Ambil detail jika diminta
-        if (fetchDetailsFlag && item.id) {
-          await sleep(600);
-          try {
-            const detailRes = await fetchWithRetry(`${BASE_URL}/api/detail/mhs`, {
-              method: 'POST',
-              headers: {
-                ...HEADERS,
-                'Content-Type': 'application/json',
-                'Referer': `${BASE_URL}/detail-mhs/${item.id}`,
-              },
-              body: JSON.stringify({ id: item.id }),
-            });
-
-            if (detailRes.ok) {
-              const detailJson = await detailRes.json();
-              const d = detailJson.data || detailJson;
-              if (d && typeof d === 'object') {
-                rawDetailObj = d;
-                studentKodeProdi = (d.kode_prodi || '').trim() || null;
-                studentJenjang = (d.jenjang || '').trim() || studentJenjang;
-                status = cleanStatus(d.status_saat_ini);
-                tanggalMasuk = (d.tanggal_masuk || '').trim() || null;
-                tahunMasuk = inferTahunMasuk(nim, tanggalMasuk);
-                jenisKelamin = (d.jenis_kelamin || '').trim() || null;
-              }
-            }
-          } catch (e) {
-            // Abaikan error detail agar proses tetap jalan
-          }
-        }
+        const tahunMasuk = inferTahunMasuk(nim, null);
 
         validStudentsToUpsert.push({
           kode_pt: kodePt,
           nama_pt: namaPt,
           nim,
           nama,
-          kode_prodi: studentKodeProdi,
-          prodi: studentProdi,
-          jenjang: studentJenjang,
-          status,
-          tanggal_masuk: tanggalMasuk,
+          kode_prodi: null,
+          prodi: cleanString(item.nama_prodi) || prodiNama,
+          jenjang: prodiJenjang,
+          status: 'Aktif',
+          tanggal_masuk: null,
           tahun_masuk: tahunMasuk,
-          jenis_kelamin: jenisKelamin,
-          raw_detail: rawDetailObj,
+          jenis_kelamin: null,
+          raw_detail: {},
           synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
       }
 
-      // Batch Upsert ke Supabase (?on_conflict=kode_pt,nim)
       if (validStudentsToUpsert.length > 0) {
         try {
-          const upsertRes = await supabaseRequest('students?on_conflict=kode_pt,nim', {
+          await supabaseRequest('students?on_conflict=kode_pt,nim', {
             method: 'POST',
             headers: { 'Prefer': 'resolution=merge-duplicates' },
             body: JSON.stringify(validStudentsToUpsert),
@@ -483,48 +820,21 @@ async function run() {
         } catch (dbErr) {
           console.error(`  -> Gagal menyimpan batch prodi ${prodiNama}: ${dbErr.message}`);
         }
-      } else {
-        console.log(`  -> Tidak ada mahasiswa baru/valid dari prodi ini.`);
       }
-
-      // Simpan Checkpoint
-      completedProdis.add(prodiNama);
-      prodiProcessedCount++;
-      fs.writeFileSync(
-        checkpointFileArg,
-        JSON.stringify({
-          kode_pt: kodePt,
-          nama_pt: namaPt,
-          updated_at: new Date().toISOString(),
-          completed: Array.from(completedProdis),
-        }, null, 2)
-      );
     }
-
-    // Catat ke sync_runs
-    await supabaseRequest('sync_runs', {
-      method: 'POST',
-      body: JSON.stringify([{
-        target_type: 'mhs_multi_prodi_sync',
-        target_keyword: `${namaPt} (${prodiProcessedCount} Prodi Terpartisi)`,
-        processed_count: totalDiscovered,
-        inserted_count: totalInserted,
-        updated_count: totalUpdated,
-        status: 'success',
-        ended_at: new Date().toISOString(),
-      }]),
-    });
 
     console.log('\n========================================================');
     console.log('HASIL SINKRONISASI MULTI-PRODI');
-    console.log(`Total Prodi Diproses          : ${prodiProcessedCount}`);
-    console.log(`Total Data Diterima           : ${totalDiscovered}`);
-    console.log(`Total Mahasiswa Tersimpan     : ${totalInserted}`);
-    console.log(`Dilewati Guard Kontaminasi    : ${totalSkippedGuard}`);
+    console.log(`Total Prodi Diproses      : ${prodisToProcess.length}`);
+    console.log(`Total Data Diterima       : ${totalDiscovered}`);
+    console.log(`Total Mahasiswa Tersimpan : ${totalInserted}`);
+    console.log(`Prodi Capped (>100)       : ${totalCapped}`);
     console.log('========================================================');
   }
 
-  // 3. SINKRONISASI MAHASISWA BERTARGET TUNGGAL DENGAN GUARD KONTAMINASI
+  // ====================================================================
+  // 4. SINKRONISASI MAHASISWA BERTARGET TUNGGAL (KATA KUNCI)
+  // ====================================================================
   if (mhsArg && !allProdiFlag) {
     console.log(`\n--- SINKRONISASI MAHASISWA BERTARGET ---`);
     console.log(`Query pencarian: "${mhsArg}" (Batas proses: ${maxArg})`);
@@ -539,76 +849,31 @@ async function run() {
     }
 
     const mhsJson = await mhsRes.json();
-    const list = Array.isArray(mhsJson) ? mhsJson : (mhsJson.data || []);
-    console.log(`Hasil diterima dari PDDikti: ${list.length} data (Hard cap max: 100).`);
+    const list = Array.isArray(mhsJson) ? mhsJson : mhsJson.data || [];
+    console.log(`Hasil diterima dari PDDikti: ${list.length} data.`);
 
     const toProcess = list.slice(0, maxArg);
     let inserted = 0;
-    let updated = 0;
     let skipped = 0;
 
     for (let i = 0; i < toProcess.length; i++) {
       const item = toProcess[i];
-      const nim = (item.nim || '').trim();
-      const nama = (item.nama || '').trim();
-      let nama_pt = (item.nama_pt || '').trim();
-      let prodi = (item.nama_prodi || '').trim() || null;
+      const nim = cleanString(item.nim);
+      const nama = cleanString(item.nama);
+      const nama_pt = cleanString(item.nama_pt);
+      const prodi = cleanString(item.nama_prodi) || null;
 
-      // GUARD KONTAMINASI ANTAR-KAMPUS:
       if (campusArg) {
         const targetUpper = campusArg.toUpperCase().trim();
         const studentPtUpper = nama_pt.toUpperCase().trim();
         if (!studentPtUpper.includes(targetUpper) && !targetUpper.includes(studentPtUpper)) {
-          console.log(`  [GUARD SKIP] Mahasiswa ${nama.slice(0, 2)}*** terdaftar di "${nama_pt}", bukan target "${campusArg}". Dilewati.`);
           skipped++;
           continue;
         }
       }
 
       let kode_pt = '';
-      let kode_prodi = null;
-      let jenjang = null;
-      let status = 'Aktif';
-      let tanggal_masuk = null;
-      let tahun_masuk = inferTahunMasuk(nim, null);
-      let jenis_kelamin = null;
-      let rawDetailObj = {};
-
-      if (item.id && fetchDetailsFlag) {
-        await sleep(650);
-        try {
-          const detailRes = await fetchWithRetry(`${BASE_URL}/api/detail/mhs`, {
-            method: 'POST',
-            headers: {
-              ...HEADERS,
-              'Content-Type': 'application/json',
-              'Referer': `${BASE_URL}/detail-mhs/${item.id}`,
-            },
-            body: JSON.stringify({ id: item.id }),
-          });
-
-          if (detailRes.ok) {
-            const detailJson = await detailRes.json();
-            const d = detailJson.data || detailJson;
-            if (d && typeof d === 'object') {
-              rawDetailObj = d;
-              kode_pt = (d.kode_pt || '').trim();
-              nama_pt = (d.nama_pt || '').trim() || nama_pt;
-              kode_prodi = (d.kode_prodi || '').trim() || null;
-              prodi = (d.prodi || '').trim() || prodi;
-              jenjang = (d.jenjang || '').trim() || null;
-              status = cleanStatus(d.status_saat_ini);
-              tanggal_masuk = (d.tanggal_masuk || '').trim() || null;
-              tahun_masuk = inferTahunMasuk(nim, tanggal_masuk);
-              jenis_kelamin = (d.jenis_kelamin || '').trim() || null;
-            }
-          }
-        } catch (e) {
-          console.warn(`  [DETAIL ERROR] ${nama.slice(0, 2)}***: ${e.message}`);
-        }
-      }
-
-      if (!kode_pt && nama_pt) {
+      if (nama_pt) {
         const found = await supabaseRequest(`institutions?nama=ilike.*${encodeURIComponent(nama_pt)}*&select=kode_pt&limit=1`);
         if (found && found.length > 0) {
           kode_pt = found[0].kode_pt;
@@ -622,14 +887,13 @@ async function run() {
         continue;
       }
 
-      // Pastikan institusi terdaftar
       await supabaseRequest('institutions', {
         method: 'POST',
         headers: { 'Prefer': 'resolution=merge-duplicates' },
         body: JSON.stringify([{ kode_pt, nama: nama_pt }]),
       });
 
-      const existing = await supabaseRequest(`students?kode_pt=eq.${encodeURIComponent(kode_pt)}&nim=eq.${encodeURIComponent(nim)}&select=id&limit=1`);
+      const tahunMasuk = inferTahunMasuk(nim, null);
 
       await supabaseRequest('students?on_conflict=kode_pt,nim', {
         method: 'POST',
@@ -639,46 +903,27 @@ async function run() {
           nama_pt,
           nim,
           nama,
-          kode_prodi,
+          kode_prodi: null,
           prodi,
-          jenjang,
-          status,
-          tanggal_masuk,
-          tahun_masuk,
-          jenis_kelamin,
-          raw_detail: rawDetailObj,
+          jenjang: null,
+          status: 'Aktif',
+          tanggal_masuk: null,
+          tahun_masuk: tahunMasuk,
+          jenis_kelamin: null,
+          raw_detail: {},
           synced_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }]),
       });
 
-      if (existing && existing.length > 0) {
-        updated++;
-        console.log(`  [UPDATE] ${nama.slice(0, 2)}*** [NIM: ${nim.slice(0, 2)}***] (${nama_pt} - ${prodi || '-'})`);
-      } else {
-        inserted++;
-        console.log(`  [INSERT] ${nama.slice(0, 2)}*** [NIM: ${nim.slice(0, 2)}***] (${nama_pt} - ${prodi || '-'})`);
-      }
+      inserted++;
+      console.log(`  [SIMPAN] ${nama.slice(0, 2)}*** [NIM: ${nim.slice(0, 2)}***] (${nama_pt} - ${prodi || '-'})`);
     }
 
-    await supabaseRequest('sync_runs', {
-      method: 'POST',
-      body: JSON.stringify([{
-        target_type: 'mhs_targeted',
-        target_keyword: `${campusArg ? 'PT:' + campusArg + ' | ' : ''}MHS:${mhsArg}`,
-        processed_count: toProcess.length,
-        inserted_count: inserted,
-        updated_count: updated,
-        status: 'success',
-        ended_at: new Date().toISOString(),
-      }]),
-    });
-
-    console.log('\n--- HASIL SINKRONISASI MAHASISWA ---');
+    console.log('\n--- HASIL SINKRONISASI BERTARGET ---');
     console.log(`Total Diproses         : ${toProcess.length}`);
-    console.log(`Data Mahasiswa Baru    : ${inserted}`);
-    console.log(`Data Diperbarui        : ${updated}`);
-    console.log(`Dilewati (Guard/Valid) : ${skipped}`);
+    console.log(`Data Mahasiswa Disimpan: ${inserted}`);
+    console.log(`Dilewati Guard/Valid   : ${skipped}`);
   }
 
   console.log('\nSelesai.');

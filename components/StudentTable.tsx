@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { StudentPublic } from '@/lib/types';
+import { StudentPublic, Institution } from '@/lib/types';
 import { Building2, GraduationCap, Calendar, User, Hash } from 'lucide-react';
 
 interface StudentTableProps {
   students: StudentPublic[];
   currentPage: number;
   pageSize: number;
+  onSelectCampus?: (campus: Institution) => void;
 }
 
 function getStatusBadge(status?: string | null) {
@@ -43,7 +44,7 @@ function getStatusBadge(status?: string | null) {
   );
 }
 
-export default function StudentTable({ students, currentPage, pageSize }: StudentTableProps) {
+export default function StudentTable({ students, currentPage, pageSize, onSelectCampus }: StudentTableProps) {
   const startNumber = (currentPage - 1) * pageSize;
 
   return (
@@ -94,13 +95,18 @@ export default function StudentTable({ students, currentPage, pageSize }: Studen
 
                   {/* Campus */}
                   <td className="py-3.5 px-4">
-                    <div className="flex items-center space-x-2 text-slate-800">
-                      <Building2 className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => onSelectCampus?.({ kode_pt: student.kode_pt, nama: student.nama_pt, nama_singkat: null })}
+                      title={`Filter hanya untuk ${student.nama_pt}`}
+                      className="flex items-center space-x-2 text-slate-800 text-left hover:text-emerald-700 transition group/campus"
+                    >
+                      <Building2 className="w-4 h-4 text-emerald-700 flex-shrink-0 group-hover/campus:scale-110 transition" />
                       <div>
-                        <div className="font-medium leading-snug">{student.nama_pt}</div>
+                        <div className="font-medium leading-snug group-hover/campus:underline">{student.nama_pt}</div>
                         <div className="text-xs text-slate-400">Kode PT: {student.kode_pt}</div>
                       </div>
-                    </div>
+                    </button>
                   </td>
 
                   {/* Prodi & Jenjang */}
@@ -156,10 +162,15 @@ export default function StudentTable({ students, currentPage, pageSize }: Studen
 
               {/* Card Details */}
               <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-                <div className="flex items-center space-x-2">
-                  <Building2 className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
-                  <span className="truncate font-medium text-slate-800">{student.nama_pt}</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onSelectCampus?.({ kode_pt: student.kode_pt, nama: student.nama_pt, nama_singkat: null })}
+                  title={`Filter hanya untuk ${student.nama_pt}`}
+                  className="flex items-center space-x-2 text-left hover:text-emerald-700 transition w-full group/mobilecampus"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0 group-hover/mobilecampus:scale-110 transition" />
+                  <span className="truncate font-medium text-slate-800 group-hover/mobilecampus:underline">{student.nama_pt}</span>
+                </button>
                 <div className="flex items-center space-x-2">
                   <GraduationCap className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                   <span>

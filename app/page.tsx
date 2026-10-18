@@ -27,7 +27,11 @@ export default function HomePage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
-  // Fetch students from server-side Supabase query
+  const [resultSource, setResultSource] = useState<'pddikti_live' | 'supabase_db'>('supabase_db');
+  const [isCapped, setIsCapped] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+
+  // Fetch students from server-side Supabase query or live PDDikti
   const fetchStudents = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -35,7 +39,10 @@ export default function HomePage() {
     try {
       const params = new URLSearchParams();
       if (searchQuery.trim()) params.set('q', searchQuery.trim());
-      if (selectedCampus?.kode_pt) params.set('kode_pt', selectedCampus.kode_pt);
+      if (selectedCampus?.kode_pt) {
+        params.set('kode_pt', selectedCampus.kode_pt);
+        if (selectedCampus.nama) params.set('nama_pt', selectedCampus.nama);
+      }
       if (selectedYear) params.set('tahun_masuk', selectedYear);
       if (selectedStatus) params.set('status', selectedStatus);
       params.set('page', String(currentPage));
@@ -43,7 +50,8 @@ export default function HomePage() {
 
       const res = await fetch(`/api/students?${params.toString()}`);
       if (!res.ok) {
-        throw new Error(`Server merespons status ${res.status}`);
+        const errorJson = await res.json().catch(() => null);
+        throw new Error(errorJson?.message || errorJson?.error || `Server merespons status ${res.status}`);
       }
 
       const result: StudentQueryResult = await res.json();
@@ -51,6 +59,9 @@ export default function HomePage() {
       setTotalCount(result.totalCount || 0);
       setTotalPages(result.totalPages || 0);
       setIsConfigured(result.isConfigured !== false);
+      setResultSource(result.source || (searchQuery.trim() ? 'pddikti_live' : 'supabase_db'));
+      setIsCapped(Boolean(result.isCapped));
+      setNoticeMessage(result.message || null);
       if (result.message && !result.isConfigured) {
         setErrorMessage(result.message);
       }
@@ -152,6 +163,31 @@ export default function HomePage() {
 
         {/* Results Area */}
         <div className="mt-6 space-y-4">
+          {/* Live PDDikti / DB Source Notice */}
+          {searchQuery.trim() && (
+            <div className="bg-emerald-50/90 border border-emerald-200/90 text-emerald-950 rounded-2xl p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm animate-in fade-in">
+              <div className="flex items-center space-x-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+                <div>
+                  <span className="font-bold text-emerald-900">Pencarian Langsung PDDikti:</span>{' '}
+                  <span>Hasil penelusuran diperoleh secara real-time langsung dari server PDDikti Kemdiktisaintek.</span>
+                </div>
+              </div>
+              {isCapped && (
+                <span className="text-amber-800 bg-amber-100/80 border border-amber-300 px-2.5 py-0.5 rounded-full font-semibold flex-shrink-0">
+                  Batas 100 data tercapai
+                </span>
+              )}
+            </div>
+          )}
+
+          {noticeMessage && !errorMessage && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs flex items-center space-x-2">
+              <span className="font-semibold">Perhatian:</span>
+              <span>{noticeMessage}</span>
+            </div>
+          )}
+
           {!isConfigured ? (
             <EmptyState
               type="unconfigured"
@@ -171,6 +207,7 @@ export default function HomePage() {
                 students={students}
                 currentPage={currentPage}
                 pageSize={pageSize}
+                onSelectCampus={handleCampusChange}
               />
               <Pagination
                 currentPage={currentPage}

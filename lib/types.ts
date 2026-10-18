@@ -45,6 +45,8 @@ export interface StudentQueryResult {
   pageSize: number;
   totalPages: number;
   isConfigured: boolean;
+  source?: 'pddikti_live' | 'supabase_db';
+  isCapped?: boolean;
   message?: string;
 }
 

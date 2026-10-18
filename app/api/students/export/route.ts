@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryAllStudentsForExport } from '@/lib/data/students';
+import { searchStudentsLivePDDikti } from '@/lib/pddikti/client';
+import { StudentPublic } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 function escapeCsvCell(val: unknown): string {
   if (val === null || val === undefined) return '""';
   const str = String(val);
-  // Double-quote wrap and escape existing double quotes
   return `"${str.replace(/"/g, '""')}"`;
 }
 
@@ -15,15 +16,33 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q') || '';
     const kode_pt = searchParams.get('kode_pt') || '';
+    const campusName = searchParams.get('nama_pt') || '';
     const tahun_masuk = searchParams.get('tahun_masuk') || '';
     const status = searchParams.get('status') || '';
 
-    const students = await queryAllStudentsForExport({
-      query,
-      kode_pt,
-      tahun_masuk,
-      status,
-    });
+    let students: StudentPublic[] = [];
+
+    // Jika sedang dalam pencarian langsung PDDikti, ekspor hasil live PDDikti
+    if (query.trim() !== '') {
+      const liveRes = await searchStudentsLivePDDikti({
+        query: query.trim(),
+        kode_pt: kode_pt.trim(),
+        campusName: campusName.trim(),
+        tahun_masuk,
+        status,
+        page: 1,
+        pageSize: 100,
+      });
+      students = liveRes.data;
+    } else {
+      // Jika penelusuran kampus / seluruh data, ekspor seluruh data yang cocok
+      students = await queryAllStudentsForExport({
+        query: '',
+        kode_pt: kode_pt.trim(),
+        tahun_masuk,
+        status,
+      });
+    }
 
     const headers = [
       'NIM',

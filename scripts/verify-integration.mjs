@@ -128,7 +128,23 @@ async function runApiHttpChecks() {
     env: process.env,
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 3500));
+  // Tunggu hingga server siap (maksimal 12 detik)
+  let serverReady = false;
+  for (let i = 0; i < 24; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const probe = await fetch('http://127.0.0.1:3005/api/filters');
+      if (probe.status === 200) {
+        serverReady = true;
+        break;
+      }
+    } catch {
+      // Tunggu server bind port
+    }
+  }
+  if (!serverReady) {
+    console.warn('Server belum siap setelah 12 detik, mencoba melanjutkan pengujian...');
+  }
 
   try {
     // 1. GET /api/institutions?q=Lhokseumawe
@@ -147,8 +163,8 @@ async function runApiHttpChecks() {
     console.log(`  Tahun masuk terdata di DB:`, filtData.years);
     console.log(`  Status mahasiswa terdata di DB:`, filtData.statuses);
 
-    // 3. GET /api/students
-    const studRes = await fetch('http://127.0.0.1:3005/api/students?pageSize=5');
+    // 3. GET /api/students (Pencarian Default)
+    const studRes = await fetch('http://127.0.0.1:3005/api/students?page_size=5');
     const studData = await studRes.json();
     console.log(`\n[API /api/students] Status: ${studRes.status}`);
     console.log(`  Total record mahasiswa di DB: ${studData.totalCount}`);
@@ -156,6 +172,35 @@ async function runApiHttpChecks() {
     if (studData.data?.[0]) {
       console.log(`  Sampel mahasiswa: [NIM: ${mask(studData.data[0].nim)}] ${mask(studData.data[0].nama)} (${studData.data[0].nama_pt})`);
     }
+
+    // 3a. GET /api/students?q=... (Pencarian Global Tanpa Memilih Kampus via Live API PDDikti)
+    const globalQRes = await fetch('http://127.0.0.1:3005/api/students?q=Muhammad&page_size=5');
+    const globalQData = await globalQRes.json();
+    console.log(`\n[API /api/students?q=Muhammad] Status: ${globalQRes.status}`);
+    console.log(`  Sumber Data Pencarian: ${globalQData.source} (Harus pddikti_live)`);
+    console.log(`  Total hasil pencarian nama "Muhammad": ${globalQData.totalCount}`);
+    console.log(`  Sampel hasil dari berbagai kampus:`);
+    (globalQData.data || []).slice(0, 3).forEach((s, idx) => {
+      console.log(`    ${idx + 1}. ${mask(s.nama)} [NIM: ${mask(s.nim)}] Kampus: ${s.nama_pt} (${s.prodi || '-'})`);
+    });
+
+    // 3b. GET /api/students?q=... (Pencarian Langsung Berdasarkan NIM)
+    const nimQRes = await fetch('http://127.0.0.1:3005/api/students?q=0241110018&page_size=5');
+    const nimQData = await nimQRes.json();
+    console.log(`\n[API /api/students?q=0241110018] Status: ${nimQRes.status}`);
+    console.log(`  Sumber Data NIM: ${nimQData.source}`);
+    console.log(`  Total mahasiswa ditemukan dengan NIM tersebut: ${nimQData.totalCount}`);
+    if (nimQData.data?.[0]) {
+      console.log(`  Mahasiswa terverifikasi PDDikti: ${mask(nimQData.data[0].nama)} - ${nimQData.data[0].nama_pt} (${nimQData.data[0].prodi || '-'})`);
+    }
+
+    // 3c. GET /api/students?kode_pt=... (Pencarian Khusus Kampus Tertentu)
+    const campusQRes = await fetch('http://127.0.0.1:3005/api/students?kode_pt=005016&page_size=5');
+    const campusQData = await campusQRes.json();
+    console.log(`\n[API /api/students?kode_pt=005016] Status: ${campusQRes.status}`);
+    console.log(`  Total mahasiswa kampus Politeknik Negeri Lhokseumawe (005016): ${campusQData.totalCount}`);
+    const isStrictCampus = (campusQData.data || []).every((s) => s.kode_pt === '005016');
+    console.log(`  Validasi pembatasan kampus: ${isStrictCampus ? 'TERBUKTI KETAT (100% data milik kode_pt 005016)' : 'GAGAL'}`);
 
     // 4. GET /api/students/export
     const expRes = await fetch('http://127.0.0.1:3005/api/students/export');

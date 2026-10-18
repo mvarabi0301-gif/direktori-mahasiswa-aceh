@@ -16,6 +16,7 @@ yarn-error.log*
 
 # Sync checkpoints
 .sync-*.json
+.sync-*.json.bak
 
 scripts/bundle.js
 scripts/inspect-bundle-usage.mjs

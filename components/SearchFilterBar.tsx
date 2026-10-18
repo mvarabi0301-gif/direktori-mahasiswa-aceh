@@ -45,6 +45,17 @@ export default function SearchFilterBar({
     setLocalSearch(searchQuery);
   }, [searchQuery]);
 
+  // Debounce input: otomatis mengeksekusi pencarian 500ms setelah user berhenti mengetik
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch.trim() !== searchQuery.trim()) {
+        onSearchChange(localSearch);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [localSearch, searchQuery, onSearchChange]);
+
   // Fetch dynamic filter options from database
   useEffect(() => {
     async function loadFilters() {

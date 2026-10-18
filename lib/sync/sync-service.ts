@@ -54,6 +54,15 @@ function extractYear(dateStr?: string | null): number | null {
   return null;
 }
 
+export function normalizeCampusName(name?: string | null): string {
+  if (!name) return '';
+  return name
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^A-Z0-9 ]/g, '')
+    .trim();
+}
+
 // 23 Kabupaten/Kota resmi di Provinsi Aceh
 export const ACEH_KAB_KOTA_LIST = [
   'Kab. Aceh Barat',
@@ -707,6 +716,7 @@ export async function syncCampusMultiProdi(options: MultiProdiSyncOptions): Prom
       const mhsJson = await mhsRes.json();
       const rawList = mhsJson.data || [];
       const studentsToInsert: Array<Record<string, unknown>> = [];
+      const seenInBatch = new Set<string>();
 
       for (let i = 0; i < Math.min(rawList.length, maxPerProdi); i++) {
         const item = rawList[i];
@@ -724,6 +734,10 @@ export async function syncCampusMultiProdi(options: MultiProdiSyncOptions): Prom
           skippedCount++;
           continue;
         }
+
+        const dedupeKey = `${targetKodePt}:${nim}`;
+        if (seenInBatch.has(dedupeKey)) continue;
+        seenInBatch.add(dedupeKey);
 
         let studentKodeProdi: string | null = null;
         let studentJenjang = prodiJenjang;
@@ -852,6 +866,266 @@ export async function syncCampusMultiProdi(options: MultiProdiSyncOptions): Prom
       updatedCount,
       skippedCount,
       message: `Multi-prodi sync gagal: ${msg}`,
+      errors: [...errors, msg],
+    };
+  }
+}
+
+export interface AllAcehSyncOptions {
+  campusLimit?: number;
+  prodiLimitPerCampus?: number;
+  maxStudentsPerProdi?: number;
+  fetchDetails?: boolean;
+  delayMs?: number;
+}
+
+/**
+ * Sinkronisasi Seluruh Perguruan Tinggi di Aceh
+ * Mengambil daftar seluruh kampus dari Supabase, lalu menelusuri prodi dan mahasiswanya secara bertahap.
+ */
+export async function syncAllAcehCampuses(options: AllAcehSyncOptions = {}): Promise<SyncResult> {
+  const adminClient = getSupabaseAdminClient();
+  if (!adminClient) {
+    return {
+      success: false,
+      runId: '',
+      processedCount: 0,
+      insertedCount: 0,
+      updatedCount: 0,
+      message: 'Kredensial SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi.',
+      errors: ['SUPABASE_SERVICE_ROLE_KEY missing'],
+    };
+  }
+
+  const { data: runRecord } = await adminClient
+    .from('sync_runs')
+    .insert({
+      status: 'running',
+      target_type: 'mhs_all_aceh_sync',
+      target_keyword: 'Seluruh Kampus Aceh (Supabase Dynamic Directory)',
+      processed_count: 0,
+      inserted_count: 0,
+      updated_count: 0,
+    })
+    .select('id')
+    .single();
+
+  const runId = runRecord?.id || 'local-all-aceh-' + Date.now();
+  let processedCount = 0;
+  let insertedCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let cappedProdisCount = 0;
+  const errors: string[] = [];
+
+  try {
+    // 1. Ambil seluruh kampus Aceh dari tabel institutions Supabase secara dinamis
+    const { data: allCampuses, error: campErr } = await adminClient
+      .from('institutions')
+      .select('kode_pt, nama, nama_singkat')
+      .order('nama', { ascending: true });
+
+    if (campErr || !allCampuses || allCampuses.length === 0) {
+      throw new Error(`Gagal membaca daftar kampus dari database: ${campErr?.message || 'Data kosong'}`);
+    }
+
+    const campusesToProcess = options.campusLimit && options.campusLimit > 0
+      ? allCampuses.slice(0, options.campusLimit)
+      : allCampuses;
+
+    const delay = options.delayMs || 500;
+    const maxPerProdi = options.maxStudentsPerProdi || 100;
+
+    for (let cIdx = 0; cIdx < campusesToProcess.length; cIdx++) {
+      const pt = campusesToProcess[cIdx];
+      const kodePt = cleanString(pt.kode_pt);
+      const namaPt = cleanString(pt.nama);
+
+      // 1. Dapatkan nama dan identitas resmi PDDikti dari kode_pt
+      let pddiktiPtName = namaPt;
+      let pddiktiPtSingkat = pt.nama_singkat || '';
+      try {
+        const ptLookupRes = await fetch(`${BASE_URL}/api/pencarian/pt/${encodeURIComponent(kodePt)}`, { headers: HEADERS });
+        if (ptLookupRes.ok) {
+          const ptLookupJson = await ptLookupRes.json();
+          const exactPt = (ptLookupJson.data || []).find((p: { kode?: string; nama?: string; nama_singkat?: string }) => cleanString(p.kode) === kodePt);
+          if (exactPt && exactPt.nama) {
+            pddiktiPtName = cleanString(exactPt.nama);
+            if (exactPt.nama_singkat) pddiktiPtSingkat = cleanString(exactPt.nama_singkat);
+          }
+        }
+      } catch {
+        // Fallback
+      }
+
+      const normTargetName = normalizeCampusName(pddiktiPtName);
+      const normDbName = normalizeCampusName(namaPt);
+      const normTargetSingkat = normalizeCampusName(pddiktiPtSingkat);
+
+      await sleep(delay);
+
+      // Ambil program studi kampus dari PDDikti
+      let rawProdis: Array<{ nama?: string; jenjang?: string; pt?: string; pt_singkat?: string }> = [];
+      try {
+        const prodiRes = await fetch(`${BASE_URL}/api/pencarian/prodi/${encodeURIComponent(pddiktiPtName)}`, { headers: HEADERS });
+        if (prodiRes.ok) {
+          const prodiJson = await prodiRes.json();
+          rawProdis = prodiJson.data || [];
+        }
+      } catch (e) {
+        errors.push(`Gagal ambil prodi ${namaPt}: ${e instanceof Error ? e.message : String(e)}`);
+        continue;
+      }
+
+      // Filter prodi yang cocok dengan kampus (exact normalized match)
+      const campusProdis = rawProdis.filter((p) => {
+        const normPt = normalizeCampusName(p.pt);
+        const normPtSingkat = normalizeCampusName(p.pt_singkat);
+        return normPt === normTargetName || (normDbName && normPt === normDbName) || (normTargetSingkat && normPtSingkat === normTargetSingkat);
+      });
+
+      const prodisToProcess = options.prodiLimitPerCampus && options.prodiLimitPerCampus > 0
+        ? campusProdis.slice(0, options.prodiLimitPerCampus)
+        : campusProdis;
+
+      for (let pIdx = 0; pIdx < prodisToProcess.length; pIdx++) {
+        const prodi = prodisToProcess[pIdx];
+        const prodiNama = cleanString(prodi.nama);
+        const prodiJenjang = cleanString(prodi.jenjang) || null;
+
+        await sleep(delay);
+
+        let rawList: Array<{ id?: string; nim?: string; nama?: string; nama_pt?: string; sinkatan_pt?: string; nama_prodi?: string }> = [];
+        try {
+          const mhsRes = await fetch(`${BASE_URL}/api/pencarian/mhs/${encodeURIComponent(prodiNama + ' ' + pddiktiPtName)}`, { headers: HEADERS });
+          if (mhsRes.ok) {
+            const mhsJson = await mhsRes.json();
+            rawList = mhsJson.data || [];
+          }
+        } catch {
+          continue;
+        }
+
+        if (rawList.length >= 100) {
+          cappedProdisCount++;
+        }
+
+        const studentsToInsert: Array<Record<string, unknown>> = [];
+        const seenInBatch = new Set<string>();
+
+        for (let i = 0; i < Math.min(rawList.length, maxPerProdi); i++) {
+          const item = rawList[i];
+          processedCount++;
+
+          const nim = cleanString(item.nim);
+          const nama = cleanString(item.nama);
+          const studentPt = cleanString(item.nama_pt);
+
+          if (!nim || !nama) continue;
+
+          // Guard Kontaminasi Antar-Kampus Ketat
+          const normStudentPt = normalizeCampusName(studentPt);
+          const normStudentPtSingkat = normalizeCampusName(item.sinkatan_pt || (item as unknown as { singkatan_pt?: string }).singkatan_pt);
+          const isMatchedCampus = normStudentPt === normTargetName || 
+            (normDbName && normStudentPt === normDbName) || 
+            (normTargetSingkat && normStudentPtSingkat === normTargetSingkat);
+
+          if (!isMatchedCampus) {
+            skippedCount++;
+            continue;
+          }
+
+          const dedupeKey = `${kodePt}:${nim}`;
+          if (seenInBatch.has(dedupeKey)) continue;
+          seenInBatch.add(dedupeKey);
+
+          let tahunMasuk: number | null = null;
+          if (/^(19\d{2}|20\d{2})/.test(nim)) {
+            tahunMasuk = parseInt(nim.slice(0, 4), 10);
+          } else if (/^\d{2}/.test(nim)) {
+            const prefix = parseInt(nim.slice(0, 2), 10);
+            tahunMasuk = prefix >= 80 ? 1900 + prefix : 2000 + prefix;
+          }
+
+          studentsToInsert.push({
+            kode_pt: kodePt,
+            nama_pt: namaPt,
+            nim,
+            nama,
+            kode_prodi: null,
+            prodi: cleanString(item.nama_prodi) || prodiNama,
+            jenjang: prodiJenjang,
+            status: 'Aktif',
+            tanggal_masuk: null,
+            tahun_masuk: tahunMasuk,
+            jenis_kelamin: null,
+            raw_detail: {},
+            synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        if (studentsToInsert.length > 0) {
+          const { error: upsertErr } = await adminClient
+            .from('students')
+            .upsert(studentsToInsert, { onConflict: 'kode_pt,nim' });
+
+          if (upsertErr) {
+            errors.push(`Upsert [${kodePt}] ${prodiNama}: ${upsertErr.message}`);
+          } else {
+            insertedCount += studentsToInsert.length;
+          }
+        }
+      }
+    }
+
+    if (runRecord) {
+      await adminClient
+        .from('sync_runs')
+        .update({
+          ended_at: new Date().toISOString(),
+          status: errors.length > 0 && insertedCount === 0 ? 'failed' : 'success',
+          processed_count: processedCount,
+          inserted_count: insertedCount,
+          updated_count: updatedCount,
+          error_message: errors.length > 0 ? errors.slice(0, 5).join('; ') : null,
+        })
+        .eq('id', runRecord.id);
+    }
+
+    return {
+      success: true,
+      runId,
+      processedCount,
+      insertedCount,
+      updatedCount,
+      skippedCount,
+      message: `Sinkronisasi seluruh Aceh selesai. Kampus diproses: ${campusesToProcess.length}, Mahasiswa tersimpan: ${insertedCount}, Prodi berpotensi capped (>100): ${cappedProdisCount}.`,
+      errors,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (runRecord) {
+      await adminClient
+        .from('sync_runs')
+        .update({
+          ended_at: new Date().toISOString(),
+          status: 'failed',
+          processed_count: processedCount,
+          inserted_count: insertedCount,
+          updated_count: updatedCount,
+          error_message: msg,
+        })
+        .eq('id', runRecord.id);
+    }
+    return {
+      success: false,
+      runId,
+      processedCount,
+      insertedCount,
+      updatedCount,
+      skippedCount,
+      message: `Sinkronisasi seluruh Aceh gagal: ${msg}`,
       errors: [...errors, msg],
     };
   }

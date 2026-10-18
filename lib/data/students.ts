@@ -149,7 +149,7 @@ export async function fetchInstitutions(searchQuery?: string): Promise<Instituti
     query = query.or(`nama.ilike.%${rawQ}%,nama_singkat.ilike.%${rawQ}%,kode_pt.ilike.%${rawQ}%`);
   }
 
-  const { data, error } = await query.limit(100);
+  const { data, error } = await query.limit(300);
   if (error) {
     console.error('[INSTITUTIONS ERROR] Gagal mengambil data kampus:', error.message);
     return [];
