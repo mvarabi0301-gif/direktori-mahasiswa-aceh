@@ -1,0 +1,307 @@
+ flex items-center ml-auto lg:pt-0 lg:text-m gap-5 pt-8
+". Removing a document after it has changed can corrupt the index!
+-description
+.detail-sidebar
+/([^\/]+)
+/3)
+/?([^\/]+)?
+/api
+/beranda?content_limit=
+/coming-soon
+/content/announcements?page_size=
+/content/publications?page_size=
+/content/storage/file?path=
+/contributor
+/contributor/contributor
+/detail-dosen/
+/detail-dosen/:id
+/detail-mahasiswa/
+/detail-mahasiswa/:id
+/detail-mahasiswa/nim/
+/detail-mahasiswa/nim/:nim/:id_sms
+/detail-prodi/
+/detail-prodi/:id
+/detail-pt/
+/detail-pt/:id
+/detail/mhs
+/dosen/portofolio/karya
+/dosen/portofolio/paten
+/dosen/portofolio/penelitian
+/dosen/portofolio/pengabdian
+/dosen/profile
+/dosen/study-history
+/dosen/teaching-history
+/hasil-pp
+/hasil-ppt
+/images/PT-Banner.svg
+/images/banner-1.png
+/images/banner-2.png
+/images/banner-3.png
+/images/banner-4.png
+/images/banner-5.png
+/logopddikti2.png
+/mahasiswa/nim
+/pencarian-spesifik-mahasiswa
+/pencarian/dosen/
+/pencarian/enc/all/
+/pencarian/mhs/
+/pencarian/prodi/
+/pencarian/pt/
+/pengumuman
+/perbandingan-prodi
+/perbandingan-prodi?q=
+/perbandingan-pt
+/perguruan-tinggi
+/privacy-policy
+/prodi/bidang-ilmu
+/prodi/bidang-ilmu/
+/prodi/cost-range/
+/prodi/desc/
+/prodi/detail/
+/prodi/name-histories/
+/prodi/num-students-lecturers/
+/prodi/search/filter
+/profil-lembaga
+/program-studi
+/program-studi/
+/program-studi/:bidang
+/program-studi/:query
+/pt/cost-range/
+/pt/detail/
+/pt/graduation-rate/
+/pt/jumlah-dosen/
+/pt/jumlah-mahasiswa/
+/pt/jumlah-prodi/
+/pt/locations
+/pt/mahasiswa/
+/pt/name-histories/
+/pt/peta
+/pt/prodi/
+/pt/rasio/
+/pt/sarpras-file-name/
+/pt/waktu-studi/
+/publikasi
+/search
+/search/
+/search/:userInput
+/search/dosen
+/search/dosen/
+/search/dosen/:userInput
+/search/mahasiswa/
+/search/mahasiswa/:userInput
+/search/prodi
+/search/prodi/
+/search/prodi/:userInput
+/search/pt/
+/search/pt/:userInput
+/section-perbandingan
+/security-information-policy
+/standar-pelayanan
+/tahun
+/v2/prodi/search/filter?limit=
+/v2/pt/search/filter?limit=
+<MobileNav /> will be deprecated in the future versions of @material-tailwind/react use <Collapse /> instead.
+      
+More details: https://www.material-tailwind.com/docs/react/collapse
+      
+<a href="https://leafletjs.com" title="A JavaScript library for interactive maps">
+<script></script>
+A history only accepts one active listener
+Accept
+Accept-Encoding
+Attempted to load an infinite number of tiles
+Capture
+Data Scientist bertanggung jawab melakukan riset, implementasi, dan evaluasi pengembangan model machine learning Question-Answering (QA) pada pencarian Kanal Pengetahuan Dikti.
+Decryptor
+Encryptor
+Error fetching student details:
+Frontend Dev memiliki tanggung jawab, termasuk slicing desain menjadi kode dengan ReactJS, integrasi dengan database, serta menciptakan website Helpdesk dan PDDikti yang responsif dan mudah digunakan.
+Hasil pencarian data pendidikan tinggi di PDDikti.
+Invalid attempt to destructure non-iterable instance.
+In order to be iterable, non-array objects must have a [Symbol.iterator]() method.
+Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.
+Invalid attempt to spread non-iterable instance.
+In order to be iterable, non-array objects must have a [Symbol.iterator]() method.
+Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.
+Jumlah dosen pada prodi tertentu
+Jumlah dosen tetap yang berhomebase di prodi tertentu
+Jumlah dosen tetep (homebase dan non homebase) yang mengajar pada prodi dan periode tertentu
+Jumlah dosen tidak tetap yang berhomebase di prodi tertentu
+MaterialTailwind.SelectOption
+Max CSS variable fallback depth detected in property "
+MiniSearch: loadJSON should be given the same options used when serializing the index
+MiniSearch: option "fields" must be provided
+MiniSearch: unknown option "
+Native crypto module could not be used to get secure random number.
+NativeScript
+Option
+Profil dan data detail perguruan tinggi di PDDikti.
+Profil dan data detail program studi di PDDikti.
+SelectOption
+September
+There is no suitable adapter to dispatch the request 
+Tidak ada hasil pencarian
+UI/UX Designer bertanggung jawab merancang antarmuka dan pengalaman pengguna yang optimal untuk produk digital dengan menggabungkan tampilan visual dan penelitian pengguna.
+Unknown adapter '
+Unknown option 
+X-Recaptcha-Token
+You're attempting to animate multiple children within AnimatePresence, but its exitBeforeEnter prop is set to true. This will lead to odd visual behaviour.
+[Axios v1.6.2] Transitional option '
+[nama PT] [nama prodi]
+__options
+_doCryptBlock
+_empty
+_locateOptions
+_options
+_toGtagOptions
+abort auxClick cancel canPlay canPlayThrough click close contextMenu copy cut drag dragEnd dragEnter dragExit dragLeave dragOver dragStart drop durationChange emptied encrypted ended error gotPointerCapture input invalid keyDown keyPress keyUp load loadedData loadedMetadata loadStart lostPointerCapture mouseDown mouseMove mouseOut mouseOver mouseUp paste pause play playing pointerCancel pointerDown pointerMove pointerOut pointerOver pointerUp progress rateChange reset resize seeked seeking stalled submit suspend timeUpdate touchCancel touchEnd touchStart volumeChange scroll toggle touchMove waiting wheel
+abort canplay canplaythrough durationchange emptied encrypted ended error loadeddata loadedmetadata loadstart pause play playing progress ratechange resize seeked seeking stalled suspend timeupdate volumechange waiting
+accept-charset
+acceptCharset
+acceptsBooleans
+adaptHeight
+adapter
+adapter 
+adapterName
+adaptiveHeight
+akreditasi_pt
+as no adapter specified
+assertOptions
+attemptToResolveRelativeTarget
+autoSuggestOptions
+banyak__hasil__pencarian
+bidang ilmu sesuai pencarian ditemukan
+bujur_pt
+capture
+captureStackTrace
+createDecryptor
+createEncryptor
+crypto
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAApCAYAAADAk4LOAAAFgUlEQVR4Aa1XA5BjWRTN2oW17d3YaZtr2962HUzbDNpjszW24mRt28p47v7zq/bXZtrp/lWnXr337j3nPCe85NcypgSFdugCpW5YoDAMRaIMqRi6aKq5E3YqDQO3qAwjVWrD8Ncq/RBpykd8oZUb/kaJutow8r1aP9II0WmLKLIsJyv1w/kqw9Ch2MYdB++12Onxee/QMwvf4/Dk/Lfp/i4nxTXtOoQ4pW5Aj7wpici1A9erdAN2OH64x8OSP9j3Ft3b7aWkTg/Fm91siTra0f9on5sQr9INejH6CUUUpavjFNq1B+Oadhxmnfa8RfEmN8VNAsQhPqF55xHkMzz3jSmChWU6f7/XZKNH+9+hBLOHYozuKQPxyMPUKkrX/K0uWnfFaJGS1QPRtZsOPtr3NsW0uyh6NNCOkU3Yz+bXbT3I8G3xE5EXLXtCXbbqwCO9zPQYPRTZ5vIDXD7U+w7rFDEoUUf7ibHIR4y6bLVPXrz8JVZEql13trxwue/uDivd3fkWRbS6/IA2bID4uk0UpF1N8qLlbBlXs4Ee7HLTfV1j54APvODnSfOWBqtKVvjgLKzF5YdEk5ewRkGlK0i33Eofffc7HT56jD7/6U+qH3Cx7SBLNntH5YIPvODnyfIXZYRVDPqgHtLs5ABHD3YzLuespb7t79FY34DjMwrVrcTuwlT55YMPvOBnRrJ4VXTdNnYug5ucHLBjEpt30701A3Ts+HEa73u6dT3FNWwflY86eMHPk+Yu+i6pzUpRrW7SNDg5JHR4KapmM5Wv2E8Tfcb1HoqqHMHU+uWDD7zg54mz5/2BSnizi9T1Dg4QQXLToGNCkb6tb1NU+QAlGr1++eADrzhn/u8Q2YZhQVlZ5+CAOtqfbhmaUCS1ezNFVm2imDbPmPng5wmz+gwh+oHDce0eUtQ6OGDIyR0uUhUsoO3vfDmmgOezH0mZN59x7MBi++WDL1g/eEiU3avlidO671bkLfwbw5XV2P8Pzo0ydy4t2/0eu33xYSOMOD8hTf4CrBtGMSoXfPLchX+J0ruSePw3LZeK0juPJbYzrhkH0io7B3k164hiGvawhOKMLkrQLyVpZg8rHFW7E2uHOL888IBPlNZ1FPzstSJM694fWr6RwpvcJK60+0HCILTBzZLFNdtAzJaohze60T8qBzyh5ZuOg5e7uwQppofEmf2++DYvmySqGBuKaicF1blQjhuHdvCIMvp8whTTfZzI7RldpwtSzL+F1+wkdZ2TBOW2gIF88PBTzD/gpeREAMEbxnJcaJHNHrpzji0gQCS6hdkEeYt9DF/2qPcEC8RM28Hwmr3sdNyht00byAut2k3gufWNtgtOEOFGUwcXWNDbdNbpgBGxEvKkOQsxivJx33iow0Vw5S6SVTrpVq11ysA2Rp7gTfPfktc6zhtXBBC+adRLshf6sG2RfHPZ5EAc4sVZ83yCN00Fk/4kggu40ZTvIEm5g24qtU4KjBrx/BTTH8ifVASAG7gKrnWxJDcU7x8X6Ecczhm3o6YicvsLXWfh3Ch1W0k8x0nXF+0fFxgt4phz8QvypiwCCFKMqXCnqXExjq10beH+UUA7+nG6mdG/Pu0f3LgFcGrl2s0kNNjpmoJ9o4B29CMO8dMT4Q5ox8uitF6fqsrJOr8qnwNbRzv6hSnG5wP+64C7h9lp30hKNtKdWjtdkbuPA19nJ7Tz3zR/ibgARbhb4AlhavcBebmTHcFl2fvYEnW0ox9xMxKBS8btJ+KiEbq9zA4RthQXDhPa0T9TEe69gWupwc6uBUphquXgf+/FrIjweHQS4/pduMe5ERUMHUd9xv8ZR98CxkS4F2n3EUrUZ10EYNw7BWm9x1GiPssi3GgiGRDKWRYZfXlON+dfNbM+GgIwYdwAAAAASUVORK5CYII=
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAABSCAMAAAAhFXfZAAAC91BMVEVMaXEzeak2f7I4g7g3g7cua5gzeKg8hJo3grY4g7c3grU0gLI2frE0daAubJc2gbQwd6QzeKk2gLMtd5sxdKIua5g1frA2f7IydaM0e6w2fq41fK01eqo3grgubJgta5cxdKI1f7AydaQydaMxc6EubJgvbJkwcZ4ubZkwcJwubZgubJcydqUydKIxapgubJctbJcubZcubJcvbJYubJcvbZkubJctbJctbZcubJg2f7AubJcrbZcubJcubJcua5g3grY0fq8ubJcubJdEkdEwhsw6i88vhswuhcsuhMtBjMgthMsrg8srgss6is8qgcs8i9A9iMYtg8spgcoogMo7hcMngMonf8olfso4gr8kfck5iM8jfMk4iM8he8k1fro7itAgesk2hs8eecgzfLcofssdeMg0hc4cd8g2hcsxeLQbdsgZdcgxeLImfcszhM0vda4xgckzhM4xg84wf8Yxgs4udKsvfcQucqhUndROmdM1fK0wcZ8vb5w0eqpQm9MzeKhXoNVcpdYydKNWn9VZotVKltJFjsIwcJ1Rms9OlslLmtH///8+kc9epdYzd6dbo9VHkMM2f7FHmNBClM8ydqVcpNY9hro3gLM9hLczealQmcw3fa46f7A8gLMxc6I3eagyc6FIldJMl9JSnNRSntNNl9JPnNJFi75UnM9ZodVKksg8kM45jc09e6ZHltFBk883gbRBh7pDk9EwcaBzn784g7dKkcY2i81Om9M7j85Llc81is09g7Q4grY/j9A0eqxKmdFFltBEjcXf6fFImdBCiLxJl9FGlNFBi78yiMxVndEvbpo6js74+vx+psPP3+o/ks5HkcpGmNCjwdZCkNDM3ehYoNJEls+lxNkxh8xHks0+jdC1zd5Lg6r+/v/H2ufz9/o3jM3t8/edvdM/k89Th61OiLBSjbZklbaTt9BfptdjmL1AicBHj8hGk9FAgK1dkLNTjLRekrdClc/k7fM0icy0y9tgp9c4jc2NtM9Dlc8zicxeXZn3AAAAQ3RSTlMAHDdTb4yPA+LtnEQmC4L2EmHqB7XA0d0sr478x4/Yd5i1zOfyPkf1sLVq4Nh3FvjxopQ2/STNuFzUwFIwxKaejILpIBEV9wAABhVJREFUeF6s1NdyFEcY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
+data:image/png;base64,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
+data:image/png;base64,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
+decrypt
+decryptBlock
+defaultOptions
+depth
+description
+descriptionId
+detail
+details
+details:not([inert])
+details:not([open]) *
+details>summary:first-of-type
+details>summary:first-of-type:not([inert])
+empty `fieldsObject` given to .set()
+encrypt
+encryptBlock
+exception
+fixed z-[49] h-full w-[75%] bg-white right-0 p-5 shadow-2xl md:hidden detail-sidebar
+flex align-center justify-center pt-5
+flex flex-col bg-neutral-10 w-[302px] rounded-md justify-between pb-5 pt-2 shadow-shadow-2 
+flex flex-col md:flex-row md:justify-between pt-5 gap-5 text-m
+flex items-center justify-center gap-x-2 pt-5 mt-5
+gaOptions
+getAdapter
+getDepth
+getOwnPropertyDescriptor
+getOwnPropertyDescriptors
+gotpointercapture
+grecaptcha
+gtagOptions
+hasil-ppt
+header name must be a non-empty string
+https://cdn.mapmarker.io/api/v1/font-awesome/v5/pin?icon=fa-university&hoffset=0&voffset=-1&background=5533BF
+https://www.google.com/recaptcha/api.js?render=
+iconUrl not set in Icon options (see the docs).
+id_pt
+importScripts
+interceptors
+jenjang_prodi
+jumlah_prodi
+kab_kota_pt
+kecamatan_pt
+keterangan__bidang__prodi
+kode_prodi
+kode_pt
+left-0 pt-3
+left-3 pt-0.5
+lintang_pt
+loog-pt
+lostpointercapture
+markersInheritOptions
+menu pencarian spesifik
+mergeOptions
+msCrypto
+mt-10 lg:flex lg:px-[108px] px-5 py-[54px] pt-[100px] bg-gradient-to-r from-linear-main-1 to-linear-main-2 shadow-inner-shadow-1 rounded-tl-2xl rounded-tr-2xl text-neutral-10 relative w-full
+nama__bidang__prodi
+nama_prodi
+nama_prodi_lama
+nama_pt
+nama_pt_baru
+nama_pt_lama
+noscript
+nuptk
+og:description
+onClickCapture
+onDoubleClickCapture
+onMouseDownCapture
+onMouseMoveCapture
+onMouseUpCapture
+onPointerDownCapture
+option
+option 
+options
+options must be an object
+pathOptions
+perbandingan-prodi
+perbandingan-prodi?q=
+perbandingan-pt
+polygonOptions
+prodi
+prodi/
+prodi/daya-tampung/
+prodi/graduation-rate/
+prodi/logo-pt/
+prodi/rasio-dosen-mahasiswa/
+prodiBidang
+provinsi_pt
+pt-2 text-m font-regular
+pt-4
+pt-4 text-m font-medium text-secondary-focus cursor-pointer flex flex-col space-y-4
+pt-5
+pt-8 md:pt-0 flex-1
+pt-[9px]
+pt-px
+pt/
+pt/logo/
+pt/sarpras-blob/
+reduceDescriptors
+removeEmptyString
+script
+script[src*="recaptcha/api.js"]
+scroll-pt
+searchOptions
+setOptions
+sinkatan_pt
+spiderLegPolylineOptions
+stat_prodi
+static/media/dropdown_detailpt_prodi.11e46d352788d2a3f56d0f899e654121.svg
+static/media/gmaps_detailpt.6d7f7f4c99c6530fe55fdc147a1392c2.svg
+static/media/prodi.3f1381b5b3214c02a47c.svg
+static/media/prodi.3f1381b5b3214c02a47cef11d28eb2ae.svg
+status_prodi
+status_pt
+subscriptions
+table-caption
+text-black flex align-center justify-center pt-5 space-x-4
+text-l font-semibold grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 pt-3 px-3 gap-4
+text-primary-main text-2xl sm:text-3xl font-bold text-center pt-2 pb-4
+tgl_berdiri_pt
+twitter:description
+useSelect() must be used within a Select. It happens when you use SelectOption component outside the Select component.
+w-[302px] h-[380px] flex flex-col gap-2 rounded-md bg-neutral-10 justify-around pb-4 pt-2 shadow-shadow-2 
+w-full pt-5 flex flex-wrap gap-4 justify-between
+w-full pt-5 flex flex-wrap gap-4 ml-2
+yoyo, loop and flip have been removed from the API. Replace with repeat and repeatType options.
