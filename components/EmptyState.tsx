@@ -6,6 +6,8 @@ interface EmptyStateProps {
   message?: string;
   onReset?: () => void;
   onRetry?: () => void;
+  onFallback?: () => void;
+  fallbackLabel?: string;
 }
 
 export default function EmptyState({
@@ -13,6 +15,8 @@ export default function EmptyState({
   message,
   onReset,
   onRetry,
+  onFallback,
+  fallbackLabel,
 }: EmptyStateProps) {
   if (type === 'unconfigured') {
     return (
@@ -45,21 +49,32 @@ export default function EmptyState({
           <AlertCircle className="w-8 h-8 stroke-[1.8]" />
         </div>
         <h3 className="text-lg font-bold text-slate-900 mb-2">
-          Terjadi Kesalahan Saat Mengambil Data
+          Terjadi Kesalahan Saat Menghubungi API PDDikti
         </h3>
         <p className="text-sm text-slate-600 max-w-md mx-auto mb-6">
-          {message || 'Tidak dapat terhubung ke server atau database saat ini.'}
+          {message || 'Tidak dapat terhubung ke server PDDikti Kemdiktisaintek saat ini.'}
         </p>
-        {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Coba Lagi</span>
-          </button>
-        )}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Coba Lagi ke PDDikti</span>
+            </button>
+          )}
+          {onFallback && (
+            <button
+              type="button"
+              onClick={onFallback}
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm transition"
+            >
+              <span>{fallbackLabel || 'Cari di Arsip Database (100.507 Mahasiswa)'}</span>
+            </button>
+          )}
+        </div>
       </div>
     );
   }

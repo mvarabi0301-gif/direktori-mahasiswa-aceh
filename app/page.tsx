@@ -28,13 +28,16 @@ export default function HomePage() {
   const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
   const [resultSource, setResultSource] = useState<'pddikti_live' | 'supabase_db'>('supabase_db');
+  const [preferredSource, setPreferredSource] = useState<'auto' | 'supabase'>('auto');
   const [isCapped, setIsCapped] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   // Fetch students from server-side Supabase query or live PDDikti
-  const fetchStudents = useCallback(async () => {
+  const fetchStudents = useCallback(async (forcedSrc?: 'auto' | 'supabase') => {
     setIsLoading(true);
     setErrorMessage(null);
+
+    const activeSrc = forcedSrc || preferredSource;
 
     try {
       const params = new URLSearchParams();
@@ -45,6 +48,7 @@ export default function HomePage() {
       }
       if (selectedYear) params.set('tahun_masuk', selectedYear);
       if (selectedStatus) params.set('status', selectedStatus);
+      if (activeSrc === 'supabase') params.set('source', 'supabase');
       params.set('page', String(currentPage));
       params.set('page_size', String(pageSize));
 
@@ -72,7 +76,7 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedCampus, selectedYear, selectedStatus, currentPage, pageSize]);
+  }, [searchQuery, selectedCampus, selectedYear, selectedStatus, currentPage, pageSize, preferredSource]);
 
   // Trigger query on parameter change
   useEffect(() => {
@@ -82,11 +86,13 @@ export default function HomePage() {
   // Reset page to 1 when filters change
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
+    setPreferredSource('auto');
     setCurrentPage(1);
   };
 
   const handleCampusChange = (campus: Institution | null) => {
     setSelectedCampus(campus);
+    setPreferredSource('auto');
     setCurrentPage(1);
   };
 
@@ -105,6 +111,7 @@ export default function HomePage() {
     setSelectedCampus(null);
     setSelectedYear('');
     setSelectedStatus('');
+    setPreferredSource('auto');
     setCurrentPage(1);
   };
 
@@ -197,7 +204,19 @@ export default function HomePage() {
             <EmptyState
               type="error"
               message={errorMessage}
-              onRetry={fetchStudents}
+              onRetry={() => {
+                setPreferredSource('auto');
+                fetchStudents('auto');
+              }}
+              onFallback={
+                searchQuery.trim()
+                  ? () => {
+                      setPreferredSource('supabase');
+                      fetchStudents('supabase');
+                    }
+                  : undefined
+              }
+              fallbackLabel="Cari di Arsip Database Terverifikasi (100.507 Mahasiswa)"
             />
           ) : isLoading ? (
             <LoadingSkeleton />

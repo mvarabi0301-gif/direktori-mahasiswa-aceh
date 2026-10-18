@@ -12,11 +12,12 @@ export async function GET(request: NextRequest) {
     const campusName = searchParams.get('nama_pt') || '';
     const tahun_masuk = searchParams.get('tahun_masuk') || '';
     const status = searchParams.get('status') || '';
+    const sourceParam = searchParams.get('source') || 'auto';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = parseInt(searchParams.get('page_size') || '15', 10);
 
     // B.1 & B.4: Jika pengguna mengetik nama mahasiswa atau NIM, panggil API PDDikti secara live!
-    if (query.trim() !== '') {
+    if (query.trim() !== '' && sourceParam !== 'supabase') {
       const liveResult = await searchStudentsLivePDDikti({
         query: query.trim(),
         kode_pt: kode_pt.trim(),
@@ -30,10 +31,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(liveResult);
     }
 
-    // Jika pengguna memilih kampus tanpa mengetik nama:
-    // Tampilkan data mahasiswa terverifikasi dari Supabase
+    // Tampilkan data mahasiswa terverifikasi dari Supabase (pencarian arsip database / penelusuran kampus)
     const result = await queryStudents({
-      query: '',
+      query: sourceParam === 'supabase' ? query.trim() : '',
       kode_pt,
       tahun_masuk,
       status,
