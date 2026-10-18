@@ -92,6 +92,9 @@ async function fetchPDDiktiJson<T>(endpoint: string, timeoutMs = 8000): Promise<
       if (res.status === 429) {
         return { data: null, error: 'Batas frekuensi permintaan API PDDikti tercapai (HTTP 429). Silakan tunggu sejenak.' };
       }
+      if (res.status === 403) {
+        return { data: null, error: 'API PDDikti membatasi akses dari IP cloud server (HTTP 403 - Firewall Kemdiktisaintek). Silakan coba lagi atau gunakan tombol arsip database terverifikasi.' };
+      }
       return { data: null, error: `API PDDikti merespons kode HTTP ${res.status}.` };
     }
 
