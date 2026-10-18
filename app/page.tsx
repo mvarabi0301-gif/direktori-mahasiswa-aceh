@@ -10,6 +10,11 @@ import EmptyState from '@/components/EmptyState';
 import LoadingSkeleton from '@/components/LoadingSkeleton';
 import { Institution, StudentPublic, StudentQueryResult } from '@/lib/types';
 
+// Extended result type to accommodate gatewayFailed field from API
+interface ExtendedStudentQueryResult extends StudentQueryResult {
+  gatewayFailed?: string;
+}
+
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCampus, setSelectedCampus] = useState<Institution | null>(null);
@@ -28,16 +33,15 @@ export default function HomePage() {
   const [isDownloadingCsv, setIsDownloadingCsv] = useState(false);
 
   const [resultSource, setResultSource] = useState<'pddikti_live' | 'supabase_db'>('supabase_db');
-  const [preferredSource, setPreferredSource] = useState<'auto' | 'supabase'>('auto');
   const [isCapped, setIsCapped] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  // gatewayFailed: truthy when auto-fallback happened (live API failed)
+  const [gatewayFailed, setGatewayFailed] = useState<string | null>(null);
 
-  // Fetch students from server-side Supabase query or live PDDikti
-  const fetchStudents = useCallback(async (forcedSrc?: 'auto' | 'supabase') => {
+  const fetchStudents = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
-
-    const activeSrc = forcedSrc || preferredSource;
+    setGatewayFailed(null);
 
     try {
       const params = new URLSearchParams();
@@ -48,27 +52,41 @@ export default function HomePage() {
       }
       if (selectedYear) params.set('tahun_masuk', selectedYear);
       if (selectedStatus) params.set('status', selectedStatus);
-      if (activeSrc === 'supabase') params.set('source', 'supabase');
       params.set('page', String(currentPage));
       params.set('page_size', String(pageSize));
 
       const res = await fetch(`/api/students?${params.toString()}`);
+
+      // 503 → both live and DB failed → genuine error, show error state
+      if (res.status === 503) {
+        const errorJson = await res.json().catch(() => null);
+        throw new Error(errorJson?.message || 'Layanan pencarian tidak tersedia saat ini. Coba lagi beberapa saat.');
+      }
+
+      // Any other non-ok status
       if (!res.ok) {
         const errorJson = await res.json().catch(() => null);
         throw new Error(errorJson?.message || errorJson?.error || `Server merespons status ${res.status}`);
       }
 
-      const result: StudentQueryResult = await res.json();
+      const result: ExtendedStudentQueryResult = await res.json();
       setStudents(result.data || []);
       setTotalCount(result.totalCount || 0);
       setTotalPages(result.totalPages || 0);
       setIsConfigured(result.isConfigured !== false);
-      setResultSource(result.source || (searchQuery.trim() ? 'pddikti_live' : 'supabase_db'));
+      setResultSource(result.source || 'supabase_db');
       setIsCapped(Boolean(result.isCapped));
-      setNoticeMessage(result.message || null);
-      if (result.message && !result.isConfigured) {
-        setErrorMessage(result.message);
+      setNoticeMessage(null);
+
+      // If auto-fallback happened, store it for the small inline notice
+      if (result.gatewayFailed) {
+        setGatewayFailed(result.gatewayFailed);
       }
+
+      if (!result.isConfigured) {
+        setErrorMessage(result.message || 'Supabase belum dikonfigurasi.');
+      }
+
       setHasSearched(true);
     } catch (err) {
       console.error('Gagal mengambil data mahasiswa:', err);
@@ -76,23 +94,19 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, selectedCampus, selectedYear, selectedStatus, currentPage, pageSize, preferredSource]);
+  }, [searchQuery, selectedCampus, selectedYear, selectedStatus, currentPage, pageSize]);
 
-  // Trigger query on parameter change
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
 
-  // Reset page to 1 when filters change
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    setPreferredSource('auto');
     setCurrentPage(1);
   };
 
   const handleCampusChange = (campus: Institution | null) => {
     setSelectedCampus(campus);
-    setPreferredSource('auto');
     setCurrentPage(1);
   };
 
@@ -111,11 +125,9 @@ export default function HomePage() {
     setSelectedCampus(null);
     setSelectedYear('');
     setSelectedStatus('');
-    setPreferredSource('auto');
     setCurrentPage(1);
   };
 
-  // Download complete CSV of ALL results matching current query & filters
   const handleDownloadCsv = () => {
     setIsDownloadingCsv(true);
     try {
@@ -124,20 +136,24 @@ export default function HomePage() {
       if (selectedCampus?.kode_pt) params.set('kode_pt', selectedCampus.kode_pt);
       if (selectedYear) params.set('tahun_masuk', selectedYear);
       if (selectedStatus) params.set('status', selectedStatus);
-
-      // Trigger direct download via browser navigation
       window.location.href = `/api/students/export?${params.toString()}`;
     } finally {
       setTimeout(() => setIsDownloadingCsv(false), 2000);
     }
   };
 
+  // Label badges for each source type
+  const sourceLabel =
+    resultSource === 'pddikti_live'
+      ? { dot: 'bg-emerald-500 animate-pulse', bar: 'bg-emerald-50/90 border-emerald-200/90 text-emerald-950', title: 'text-emerald-900', label: 'Pencarian Langsung PDDikti', desc: 'Hasil diperoleh secara real-time dari server PDDikti Kemdiktisaintek.' }
+      : { dot: 'bg-indigo-500', bar: 'bg-indigo-50/90 border-indigo-200/90 text-indigo-950', title: 'text-indigo-900', label: 'Arsip Database Supabase', desc: 'Hasil dari arsip 100.507 mahasiswa yang telah diverifikasi dari PDDikti.' };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Title Section */}
+        {/* Hero */}
         <div className="text-center max-w-3xl mx-auto mb-8 space-y-2.5">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
             Penelusuran Direktori Mahasiswa Aceh
@@ -148,7 +164,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Search & Filter Component */}
+        {/* Search & Filter */}
         <SearchFilterBar
           searchQuery={searchQuery}
           onSearchChange={handleSearchChange}
@@ -165,35 +181,20 @@ export default function HomePage() {
           onDownloadCsv={handleDownloadCsv}
         />
 
-        {/* Status & Empirical Constraints Notice */}
+        {/* Empirical constraints info */}
         <StatusNotice />
 
-        {/* Results Area */}
+        {/* Results */}
         <div className="mt-6 space-y-4">
-          {/* Live PDDikti / DB Source Notice */}
-          {searchQuery.trim() && !errorMessage && (
-            <div
-              className={`rounded-2xl p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm animate-in fade-in border ${
-                resultSource === 'pddikti_live'
-                  ? 'bg-emerald-50/90 border-emerald-200/90 text-emerald-950'
-                  : 'bg-indigo-50/90 border-indigo-200/90 text-indigo-950'
-              }`}
-            >
+
+          {/* Source badge — shown when query active and no error blocking view */}
+          {(searchQuery.trim() || selectedCampus) && !errorMessage && !isLoading && hasSearched && (
+            <div className={`rounded-2xl p-4 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-sm animate-in fade-in border ${sourceLabel.bar}`}>
               <div className="flex items-center space-x-2.5">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                    resultSource === 'pddikti_live' ? 'bg-emerald-500 animate-pulse' : 'bg-indigo-500'
-                  }`}
-                ></span>
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${sourceLabel.dot}`} />
                 <div>
-                  <span className={`font-bold ${resultSource === 'pddikti_live' ? 'text-emerald-900' : 'text-indigo-900'}`}>
-                    {resultSource === 'pddikti_live' ? 'Pencarian Langsung PDDikti:' : 'Arsip Database Terverifikasi:'}
-                  </span>{' '}
-                  <span>
-                    {resultSource === 'pddikti_live'
-                      ? 'Hasil penelusuran diperoleh secara real-time langsung dari server PDDikti Kemdiktisaintek.'
-                      : 'Menampilkan data dari 100.507 mahasiswa yang telah diverifikasi dari PDDikti di Supabase.'}
-                  </span>
+                  <span className={`font-bold ${sourceLabel.title}`}>{sourceLabel.label}:</span>{' '}
+                  <span>{sourceLabel.desc}</span>
                 </div>
               </div>
               {isCapped && (
@@ -204,35 +205,32 @@ export default function HomePage() {
             </div>
           )}
 
-          {noticeMessage && !errorMessage && (
+          {/* Small fallback notice — shown when auto-fallback happened but results ARE present */}
+          {gatewayFailed && students.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs flex items-start space-x-2">
+              <span className="font-semibold mt-0.5 shrink-0">ℹ️ Catatan:</span>
+              <span>
+                Pencarian langsung PDDikti tidak tersedia saat ini. Hasil di bawah diambil otomatis dari arsip database terverifikasi.
+              </span>
+            </div>
+          )}
+
+          {/* Generic notice message (e.g. "no results from live, showing archive") */}
+          {noticeMessage && !errorMessage && students.length === 0 && (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs flex items-center space-x-2">
-              <span className="font-semibold">Perhatian:</span>
+              <span className="font-semibold">ℹ️</span>
               <span>{noticeMessage}</span>
             </div>
           )}
 
+          {/* Main content area */}
           {!isConfigured ? (
-            <EmptyState
-              type="unconfigured"
-              message={errorMessage || undefined}
-            />
+            <EmptyState type="unconfigured" message={errorMessage || undefined} />
           ) : errorMessage ? (
             <EmptyState
               type="error"
               message={errorMessage}
-              onRetry={() => {
-                setPreferredSource('auto');
-                fetchStudents('auto');
-              }}
-              onFallback={
-                searchQuery.trim()
-                  ? () => {
-                      setPreferredSource('supabase');
-                      fetchStudents('supabase');
-                    }
-                  : undefined
-              }
-              fallbackLabel="Cari di Arsip Database Terverifikasi (100.507 Mahasiswa)"
+              onRetry={() => fetchStudents()}
             />
           ) : isLoading ? (
             <LoadingSkeleton />
@@ -257,17 +255,13 @@ export default function HomePage() {
               />
             </>
           ) : hasSearched ? (
-            <EmptyState
-              type="not-found"
-              onReset={handleResetFilters}
-            />
+            <EmptyState type="not-found" onReset={handleResetFilters} />
           ) : (
             <EmptyState type="initial" />
           )}
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
