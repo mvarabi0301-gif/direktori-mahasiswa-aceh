@@ -1,7 +1,55 @@
 import { StudentPublic } from '@/lib/types';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
+import acehInstitutionsData from '@/lib/data/aceh-institutions.json';
 
 const BASE_URL = 'https://pddikti.kemdiktisaintek.go.id';
+
+export interface AcehInstitutionEntry {
+  kode_pt: string;
+  nama: string;
+  nama_singkat: string | null;
+}
+
+const acehInstitutions: AcehInstitutionEntry[] = acehInstitutionsData;
+
+const acehNormMap = new Map<string, AcehInstitutionEntry>();
+const acehList = acehInstitutions.map((inst) => {
+  const normNama = normalizeCampusName(inst.nama);
+  const normSingkat = inst.nama_singkat ? normalizeCampusName(inst.nama_singkat) : '';
+  if (normNama) acehNormMap.set(normNama, inst);
+  if (normSingkat) acehNormMap.set(normSingkat, inst);
+  return {
+    ...inst,
+    normNama,
+    normSingkat,
+  };
+});
+
+export function findAcehInstitution(
+  namaPt?: string | null,
+  sinkatanPt?: string | null
+): AcehInstitutionEntry | null {
+  const normPt = normalizeCampusName(namaPt);
+  const normSingkat = normalizeCampusName(sinkatanPt);
+
+  if (normPt && acehNormMap.has(normPt)) {
+    return acehNormMap.get(normPt)!;
+  }
+  if (normSingkat && acehNormMap.has(normSingkat)) {
+    return acehNormMap.get(normSingkat)!;
+  }
+
+  // Exact substring check if name contains or is contained in an official Aceh institution
+  for (const inst of acehList) {
+    if (inst.normNama && normPt) {
+      if (normPt.includes(inst.normNama) || inst.normNama.includes(normPt)) {
+        return inst;
+      }
+    }
+  }
+
+  return null;
+}
 
 const HEADERS = {
   'Accept': 'application/json, text/plain, */*',
@@ -93,7 +141,14 @@ async function fetchPDDiktiJson<T>(endpoint: string, timeoutMs = 8000): Promise<
         return { data: null, error: 'Batas frekuensi permintaan API PDDikti tercapai (HTTP 429). Silakan tunggu sejenak.' };
       }
       if (res.status === 403) {
-        return { data: null, error: 'API PDDikti membatasi akses dari IP cloud server (HTTP 403 - Firewall Kemdiktisaintek). Silakan coba lagi atau gunakan tombol arsip database terverifikasi.' };
+        const isChallenge = res.headers.get('cf-mitigated') === 'challenge';
+        const detail = isChallenge
+          ? 'Proteksi Cloudflare Managed Challenge (WAF Kemdiktisaintek) mendeteksi IP server cloud Vercel'
+          : 'Firewall Kemdiktisaintek membatasi akses';
+        return {
+          data: null,
+          error: `API PDDikti membatasi akses (${detail} - HTTP 403). Pencarian langsung tidak dapat memproses verifikasi browser interaktif dari cloud server. Silakan coba lagi atau gunakan tombol arsip database terverifikasi.`,
+        };
       }
       return { data: null, error: `API PDDikti merespons kode HTTP ${res.status}.` };
     }
@@ -241,7 +296,11 @@ export async function searchStudentsLivePDDikti(params: {
 
     if (!nim || !nama) continue;
 
-    // Filter Kampus Ketat jika pengguna memilih kampus tertentu
+    // Filter Kampus:
+    // A. Jika kampus spesifik dipilih: cocokkan ketat dengan kampus target
+    // B. Jika tidak ada kampus dipilih (pencarian global): filter HANYA mahasiswa dari 183 institusi Aceh
+    let matchedAcehInst: AcehInstitutionEntry | null = null;
+
     if (normTargetPt) {
       const normStudentPt = normalizeCampusName(studentPt);
       const normStudentSingkat = normalizeCampusName(studentSingkat);
@@ -251,6 +310,11 @@ export async function searchStudentsLivePDDikti(params: {
 
       if (!matchesCampus) {
         continue; // Lewati mahasiswa kampus lain
+      }
+    } else {
+      matchedAcehInst = findAcehInstitution(studentPt, studentSingkat);
+      if (!matchedAcehInst) {
+        continue; // Lewati mahasiswa perguruan tinggi di luar Aceh
       }
     }
 
@@ -276,10 +340,13 @@ export async function searchStudentsLivePDDikti(params: {
     if (seenNims.has(dedupeKey)) continue;
     seenNims.add(dedupeKey);
 
+    const studentKodePt = resolvedKodePt || matchedAcehInst?.kode_pt || '000000';
+    const studentNamaPt = studentPt || resolvedNamaPt || matchedAcehInst?.nama || 'Perguruan Tinggi';
+
     filteredStudents.push({
-      id: item.id || `live-${nim}-${resolvedKodePt || '000000'}`,
-      kode_pt: resolvedKodePt || '000000',
-      nama_pt: studentPt || resolvedNamaPt || 'Perguruan Tinggi',
+      id: item.id || `live-${nim}-${studentKodePt}`,
+      kode_pt: studentKodePt,
+      nama_pt: studentNamaPt,
       nim,
       nama,
       prodi,
